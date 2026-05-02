@@ -79,26 +79,23 @@ window.MUSettingsUI = (function () {
                 color:#555;font-size:10px;margin-top:2px;
             }
 
-            /* Toggle switch */
+            /* Toggle button */
             .mu-toggle {
-                position:relative;width:36px;height:20px;flex-shrink:0;
+                position:relative;flex-shrink:0;cursor:pointer;
             }
-            .mu-toggle input {
-                opacity:0;width:0;height:0;
-            }
+            .mu-toggle input { display:none; }
             .mu-toggle-slider {
-                position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;
-                background:#2a2a3e;border-radius:10px;transition:0.2s;
+                display:inline-flex;align-items:center;justify-content:center;
+                padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;
+                letter-spacing:0.3px;transition:all 0.2s;user-select:none;
+                border:1px solid #2a2a3e;background:#1a1a2e;color:#555;
+                min-width:60px;
             }
-            .mu-toggle-slider::before {
-                content:'';position:absolute;height:14px;width:14px;
-                left:3px;bottom:3px;background:#888;border-radius:50%;
-                transition:0.2s;
+            .mu-toggle-slider::before { content: 'ВЫКЛ'; }
+            .mu-toggle input:checked + .mu-toggle-slider {
+                background:rgba(243,156,18,0.15);border-color:#f39c12;color:#f39c12;
             }
-            .mu-toggle input:checked + .mu-toggle-slider { background:#f39c12; }
-            .mu-toggle input:checked + .mu-toggle-slider::before {
-                transform:translateX(16px);background:#fff;
-            }
+            .mu-toggle input:checked + .mu-toggle-slider::before { content: 'ВКЛ'; }
 
             /* Select */
             .mu-select {
