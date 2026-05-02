@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Mangalib Ultimate Helper",
+  "version": "1.1",
+  "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "permissions": [
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://mangalib.me/*",
+    "https://ranobelib.me/*",
+    "https://hentailib.me/*",
+    "https://v2.shlib.life/*",
+    "https://v5.animelib.org/*",
+    "https://api.cdnlibs.org/*",
+    "https://mangalib-moderation-default-rtdb.europe-west1.firebasedatabase.app/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mangalib.me/*",
+        "https://ranobelib.me/*",
+        "https://hentailib.me/*",
+        "https://v2.shlib.life/*",
+        "https://v5.animelib.org/*"
+      ],
+      "js": [
+        "lib/shared.js",
+        "lib/settings-store.js",
+        "modules/personalization.js",
+        "modules/reader.js",
+        "modules/moderation.js",
+        "modules/dashboard.js",
+        "modules/settings-ui.js",
+        "main.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
