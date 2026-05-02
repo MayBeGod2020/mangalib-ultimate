@@ -587,6 +587,9 @@ window.MUModeration = (function() {
                 setTextarea(textarea, buildText(data, title));
             }
         });
+
+        // AI анализ комментария
+        window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason);
     }
 
     function handleForumPopup(popup) {
@@ -667,6 +670,7 @@ window.MUModeration = (function() {
             if (!hasPopup && _lastPopup) {
                 _lastPopup = false;
                 popupFilled = false;
+                window.MUAiVerdict?.onPopupClose();
                 if (isModerationPage && activeCard && !activeCard.dataset.banned) {
                     activeCard.style.opacity  = '0.5';
                     activeCard.style.filter   = 'grayscale(40%)';

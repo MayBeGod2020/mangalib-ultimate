@@ -220,7 +220,8 @@ window.MUSettingsUI = (function () {
             { id: 'moderation', label: '🛡️ Модерация' },
             { id: 'dashboard', label: '📊 Панель' },
             { id: 'reader', label: '📖 Чтение' },
-            { id: 'personalization', label: '🎨 Темы' }
+            { id: 'personalization', label: '🎨 Темы' },
+            { id: 'ai', label: '🤖 ИИ' },
         ];
 
         tabsEl.innerHTML = tabs.map(t => `
@@ -249,6 +250,7 @@ window.MUSettingsUI = (function () {
         if (tabId === 'dashboard') contentEl.innerHTML = renderDashboardTab();
         if (tabId === 'reader') contentEl.innerHTML = renderReaderTab();
         if (tabId === 'personalization') contentEl.innerHTML = renderPersonalizationTab();
+        if (tabId === 'ai') contentEl.innerHTML = renderAiTab();
 
         attachListeners(tabId);
     }
@@ -474,6 +476,46 @@ window.MUSettingsUI = (function () {
         `;
     }
 
+    function renderAiTab() {
+        const ai = settings.ai || {};
+        const hasKey = !!ai.deepseekKey;
+        return `
+            <div class="mu-setting-row">
+                <div>
+                    <div class="mu-setting-label">ИИ анализ комментариев</div>
+                    <div class="mu-setting-desc">При открытии попапа бана — ИИ покажет нарушает ли комментарий правила</div>
+                </div>
+                ${renderToggle('ai', 'enabled', ai.enabled)}
+            </div>
+
+            <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                <div class="mu-setting-label">DeepSeek API ключ</div>
+                <div class="mu-setting-desc" style="margin-bottom:4px;">
+                    Получить на <a href="https://platform.deepseek.com/api_keys" target="_blank"
+                    style="color:#f39c12;">platform.deepseek.com</a>
+                </div>
+                <div style="display:flex;gap:6px;width:100%;">
+                    <input type="password" id="mu-ai-key-input" placeholder="sk-..."
+                        value="${ai.deepseekKey || ''}"
+                        style="flex:1;padding:6px 10px;background:#1a1a2e;border:1px solid #2a2a3e;
+                        border-radius:6px;color:#fff;font-size:11px;outline:none;">
+                    <button id="mu-ai-key-save"
+                        style="padding:6px 12px;border-radius:6px;border:1px solid #f39c12;
+                        background:rgba(243,156,18,0.1);color:#f39c12;cursor:pointer;font-size:11px;">
+                        Сохранить
+                    </button>
+                </div>
+                ${hasKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Ключ сохранён</div>` : ''}
+            </div>
+
+            <div style="margin-top:8px;padding:10px;background:rgba(243,156,18,0.05);
+                border:1px solid rgba(243,156,18,0.15);border-radius:8px;font-size:10px;color:#aaa;line-height:1.6;">
+                🤖 Используется модель <b style="color:#f39c12">deepseek-chat</b><br>
+                Ключ хранится локально в браузере и никуда не отправляется кроме DeepSeek API.
+            </div>
+        `;
+    }
+
     // ==================== ОБРАБОТЧИКИ ====================
 
     function attachListeners(tabId) {
@@ -558,6 +600,17 @@ window.MUSettingsUI = (function () {
         if (clearAccent) {
             clearAccent.addEventListener('click', async () => {
                 await MU.updateSetting('personalization', 'accentColor', '');
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        }
+
+        // AI key save
+        const aiKeySave = document.getElementById('mu-ai-key-save');
+        if (aiKeySave) {
+            aiKeySave.addEventListener('click', async () => {
+                const val = document.getElementById('mu-ai-key-input')?.value?.trim() || '';
+                await MU.updateSetting('ai', 'deepseekKey', val);
                 settings = await MU.getSettings();
                 renderTab(activeTab);
             });

@@ -39,10 +39,13 @@
         // 3. Модерация
         await window.MUModeration.init();
 
-        // 4. Settings UI (кнопка ⚙️)
+        // 4. AI Verdict
+        await window.MUAiVerdict.init();
+
+        // 5. Settings UI (кнопка ⚙️)
         const settingsModule = await window.MUSettingsUI.init();
 
-        // 5. Dashboard — последний, чтобы быть рядом с шестерёнкой
+        // 6. Dashboard — последний, чтобы быть рядом с шестерёнкой
         const dashboardModule = await window.MUDashboard.init();
 
         // Встраиваем кнопки в контейнер в правом верхнем углу
