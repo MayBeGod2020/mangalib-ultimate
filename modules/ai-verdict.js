@@ -155,11 +155,13 @@ window.MUAiVerdict = (function () {
                 body: JSON.stringify({
                     model: 'deepseek-v4-flash',
                     messages: [
+                        // prefix_cache_id кешируется автоматически по совпадению префикса
                         { role: 'system', content: RULES_PROMPT },
                         { role: 'user',   content: userMessage },
                     ],
                     max_tokens: 200,
-                    temperature: 0.2,
+                    temperature: 0.1,
+                    response_format: { type: 'json_object' }, // гарантированный JSON без markdown
                 }),
             });
 
@@ -173,9 +175,7 @@ window.MUAiVerdict = (function () {
 
             let parsed;
             try {
-                // Убираем возможные markdown-блоки если модель их добавила
-                const clean = raw.replace(/^```(?:json)?|```$/gm, '').trim();
-                parsed = JSON.parse(clean);
+                parsed = JSON.parse(raw);
             } catch {
                 throw new Error('Не удалось разобрать ответ ИИ');
             }
