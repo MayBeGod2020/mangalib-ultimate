@@ -51,12 +51,12 @@ window.MUSettingsUI = (function () {
             .mu-settings-close:hover { color:#fff; }
             .mu-settings-tabs {
                 display:flex;background:#0a0a1a;border-bottom:1px solid #1e1e2e;
-                overflow-x:auto;
+                overflow-x:hidden;
             }
             .mu-settings-tab {
-                padding:10px 14px;background:none;border:none;color:#666;
-                cursor:pointer;font-size:11px;border-bottom:2px solid transparent;
-                white-space:nowrap;transition:color 0.15s;
+                flex:1;padding:8px 4px;background:none;border:none;color:#666;
+                cursor:pointer;font-size:10px;border-bottom:2px solid transparent;
+                white-space:nowrap;transition:color 0.15s;text-align:center;
             }
             .mu-settings-tab:hover { color:#aaa; }
             .mu-settings-tab.active { color:#f39c12;border-bottom-color:#f39c12; }
