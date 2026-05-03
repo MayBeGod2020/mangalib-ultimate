@@ -466,7 +466,7 @@ window.MUModeration = (function() {
 
     function getCardData(card) {
         const reason      = getCardReason(card) || '—';
-        const commentText = card?.querySelector('.comment__content')?.innerText?.trim() || '—';
+        const commentText = extractCommentText(card);
         const author      = card?.querySelector('.comment-author__name')?.innerText?.trim() || '—';
         const link        = card?.querySelector('a.btn.variant-primary')?.href || '';
 
@@ -610,8 +610,18 @@ window.MUModeration = (function() {
 
     // ==================== СТРАНИЦЫ МАНГИ / АНИМЕ ====================
 
+    function extractCommentText(comment) {
+        const el = comment?.querySelector('.comment__content');
+        if (!el) return '—';
+        // innerText не читает скрытый текст (спойлеры), textContent читает всё
+        const text = el.textContent?.trim();
+        if (text && text !== '—') return text;
+        // Фолбэк: пробуем достать из HTML убрав теги
+        return el.innerHTML?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || '—';
+    }
+
     function getCommentData(comment) {
-        const commentText = comment?.querySelector('.comment__content')?.innerText?.trim() || '—';
+        const commentText = extractCommentText(comment);
         const author      = comment?.querySelector('.comment-author__name, .comment__head a')?.innerText?.trim() || '—';
         const timeEl      = comment?.querySelector('time');
         const datetime    = timeEl?.getAttribute('datetime');
