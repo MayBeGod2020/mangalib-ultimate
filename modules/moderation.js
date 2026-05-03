@@ -587,10 +587,9 @@ window.MUModeration = (function() {
             if (document.querySelector('.popup-body') && textarea) {
                 setTextarea(textarea, buildText(data, title));
             }
+            // AI анализ с контекстом тайтла
+            window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason, null, { title });
         });
-
-        // AI анализ комментария
-        window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason);
     }
 
     function handleForumPopup(popup) {
@@ -630,6 +629,26 @@ window.MUModeration = (function() {
         return { commentText, author, time };
     }
 
+    function getPageContext() {
+        // Название тайтла
+        const title =
+            document.querySelector('h1.media-name__main')?.innerText?.trim() ||
+            document.querySelector('h1[class*="title"]')?.innerText?.trim() ||
+            document.querySelector('meta[property="og:title"]')?.content?.split('·')[0]?.trim() ||
+            document.title?.split('·')[0]?.split('—')[0]?.trim() ||
+            '—';
+
+        // Глава (если страница чтения)
+        const chapterMatch = location.pathname.match(/\/c(\d+)/);
+        const chapter = chapterMatch ? `Глава ${chapterMatch[1]}` : null;
+
+        // Жанры
+        const genres = [...document.querySelectorAll('[class*="genre"], [class*="tag"]')]
+            .slice(0, 5).map(el => el.innerText?.trim()).filter(Boolean).join(', ');
+
+        return { title, chapter, genres };
+    }
+
     function handleCommentPagePopup(popup) {
         if (!settings?.moderation?.autoFillPopup) return;
         if (!activeComment) return;
@@ -641,13 +660,14 @@ window.MUModeration = (function() {
         textarea.dataset.autoFilled = 'true';
         popupFilled = true;
 
-        const data = getCommentData(activeComment);
+        const data    = getCommentData(activeComment);
+        const context = getPageContext();
         const text = `📅 Дата бана: ${MU.getNowUTC()}\n🔗 Страница: ${location.href}\n\n👤 Автор: ${data.author}\n🕐 Время: ${data.time}\n\n💬 Комментарий:\n${data.commentText}`;
         setTextarea(textarea, text);
         autoCheckBanCheckbox(popup);
 
-        // ИИ сам выберет причину (reason='' — режим автовыбора)
-        window.MUAiVerdict?.onPopupOpen(data.commentText, '', popup);
+        // ИИ сам выберет причину, передаём контекст страницы
+        window.MUAiVerdict?.onPopupOpen(data.commentText, '', popup, context);
     }
 
     // Публичный метод — вызывается из ai-verdict после получения ответа

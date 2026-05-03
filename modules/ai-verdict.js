@@ -145,7 +145,7 @@ window.MUAiVerdict = (function () {
         // Кнопка «Перепроверить»
         document.getElementById('mu-ai-rerun')?.addEventListener('click', () => {
             if (data._commentText !== undefined) {
-                analyze(data._commentText, data._reason || '', data._popup || null);
+                analyze(data._commentText, data._reason || '', data._popup || null, data._pageContext || null);
             }
         });
 
@@ -155,7 +155,7 @@ window.MUAiVerdict = (function () {
 
     // ==================== API ====================
 
-    async function analyze(commentText, reason, popup = null) {
+    async function analyze(commentText, reason, popup = null, pageContext = null) {
         const apiKey = settings?.ai?.deepseekKey;
         if (!apiKey) return;
 
@@ -163,9 +163,20 @@ window.MUAiVerdict = (function () {
 
         const isClassifyMode = !reason; // нет причины — режим автовыбора
         const systemPrompt   = isClassifyMode ? CLASSIFY_PROMPT : VERIFY_PROMPT;
-        const userMessage    = isClassifyMode
-            ? `Текст комментария:\n${commentText}`
-            : `Причина жалобы: ${reason}\n\nТекст комментария:\n${commentText}`;
+
+        // Формируем контекстный блок если есть данные о странице
+        let contextBlock = '';
+        if (pageContext?.title && pageContext.title !== '—') {
+            contextBlock += `\nКонтекст страницы:`;
+            contextBlock += `\n- Тайтл: ${pageContext.title}`;
+            if (pageContext.chapter) contextBlock += `\n- ${pageContext.chapter}`;
+            if (pageContext.genres)  contextBlock += `\n- Жанры: ${pageContext.genres}`;
+            contextBlock += '\n';
+        }
+
+        const userMessage = isClassifyMode
+            ? `${contextBlock}Текст комментария:\n${commentText}`
+            : `${contextBlock}Причина жалобы: ${reason}\n\nТекст комментария:\n${commentText}`;
 
         try {
             const controller = new AbortController();
@@ -205,7 +216,7 @@ window.MUAiVerdict = (function () {
                 throw new Error('Не удалось разобрать ответ ИИ');
             }
 
-            showPanel('result', { ...parsed, _commentText: commentText, _reason: reason, _popup: popup });
+            showPanel('result', { ...parsed, _commentText: commentText, _reason: reason, _popup: popup, _pageContext: pageContext });
 
             // В режиме автовыбора — подставляем причину в дропдаун попапа
             if (isClassifyMode && parsed.reason_key && popup && document.body.contains(popup)) {
@@ -223,9 +234,9 @@ window.MUAiVerdict = (function () {
     // ==================== ИНТЕГРАЦИЯ ====================
 
     // Вызывается из moderation.js когда открывается попап
-    function onPopupOpen(commentText, reason, popup = null) {
+    function onPopupOpen(commentText, reason, popup = null, pageContext = null) {
         if (!settings?.ai?.enabled || !settings?.ai?.deepseekKey) return;
-        analyze(commentText, reason, popup);
+        analyze(commentText, reason, popup, pageContext);
     }
 
     function onPopupClose() {
