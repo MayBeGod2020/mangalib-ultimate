@@ -203,17 +203,39 @@ window.MUAiVerdict = (function () {
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                throw new Error(err?.error?.message || `HTTP ${response.status}`);
+                const msg = err?.error?.message || `HTTP ${response.status}`;
+                MU.log('AiVerdict', 'API error:', msg, err);
+                throw new Error(msg);
             }
 
             const data = await response.json();
             const raw  = data.choices?.[0]?.message?.content?.trim() || '';
 
+            MU.log('AiVerdict', 'Raw response:', raw);
+
+            // Если пришла ошибка API
+            if (data.error) throw new Error(data.error.message || 'Ошибка API');
+            if (!raw)       throw new Error('Пустой ответ от модели');
+
             let parsed;
             try {
+                // 1. Прямой парсинг
                 parsed = JSON.parse(raw);
             } catch {
-                throw new Error('Не удалось разобрать ответ ИИ');
+                try {
+                    // 2. Убираем markdown-блоки ```json ... ```
+                    const clean = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+                    parsed = JSON.parse(clean);
+                } catch {
+                    try {
+                        // 3. Вырезаем первый JSON-объект из текста
+                        const match = raw.match(/\{[\s\S]*\}/);
+                        if (match) parsed = JSON.parse(match[0]);
+                        else throw new Error('JSON не найден');
+                    } catch {
+                        throw new Error(`Ответ: ${raw.substring(0, 100)}`);
+                    }
+                }
             }
 
             showPanel('result', { ...parsed, _commentText: commentText, _reason: reason, _popup: popup, _pageContext: pageContext });
