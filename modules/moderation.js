@@ -105,9 +105,10 @@ window.MUModeration = (function() {
         'без причины':                            '#95a5a6',
     };
 
-    let settings = null;
-    let activeCard = null;
-    let popupFilled = false;
+    let settings       = null;
+    let activeCard     = null;
+    let activeComment  = null; // комментарий на страницах манги/аниме
+    let popupFilled    = false;
 
     // ==================== ШПАРГАЛКА ====================
 
@@ -608,6 +609,52 @@ window.MUModeration = (function() {
         }
     }
 
+    // ==================== СТРАНИЦЫ МАНГИ / АНИМЕ ====================
+
+    function getCommentData(comment) {
+        const commentText = comment?.querySelector('.comment__content')?.innerText?.trim() || '—';
+        const author      = comment?.querySelector('.comment-author__name, .comment__head a')?.innerText?.trim() || '—';
+        const timeEl      = comment?.querySelector('time');
+        const datetime    = timeEl?.getAttribute('datetime');
+        let time = '—';
+        if (datetime) {
+            try {
+                time = new Date(datetime).toLocaleString('ru-RU', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', timeZone: 'UTC'
+                }) + ' UTC';
+            } catch { time = timeEl?.innerText?.trim() || '—'; }
+        } else {
+            time = timeEl?.innerText?.trim() || '—';
+        }
+        return { commentText, author, time };
+    }
+
+    function handleCommentPagePopup(popup) {
+        if (!settings?.moderation?.autoFillPopup) return;
+        if (!activeComment) return;
+
+        const isBanModal = popup.innerText.includes('Комментарий от модератора');
+        const textarea   = popup.querySelector('textarea.form-input__field');
+        if (!isBanModal || !textarea || textarea.dataset.autoFilled) return;
+
+        textarea.dataset.autoFilled = 'true';
+        popupFilled = true;
+
+        const data = getCommentData(activeComment);
+        const text = `📅 Дата бана: ${MU.getNowUTC()}\n🔗 Страница: ${location.href}\n\n👤 Автор: ${data.author}\n🕐 Время: ${data.time}\n\n💬 Комментарий:\n${data.commentText}`;
+        setTextarea(textarea, text);
+        autoCheckBanCheckbox(popup);
+
+        // ИИ сам выберет причину (reason='' — режим автовыбора)
+        window.MUAiVerdict?.onPopupOpen(data.commentText, '', popup);
+    }
+
+    // Публичный метод — вызывается из ai-verdict после получения ответа
+    function selectReason(popup, reasonText) {
+        forceSelect(popup, reasonText);
+    }
+
     function handleReviewCollectionPopup(popup) {
         if (!settings?.moderation?.autoFillPopup) return;
         const isReview     = location.href.includes('/reviews/');
@@ -694,6 +741,7 @@ window.MUModeration = (function() {
             if (isModerationPage)      handleModerationPopup(popup);
             else if (isForumPage)      handleForumPopup(popup);
             else if (isReviewCollPage) handleReviewCollectionPopup(popup);
+            else                       handleCommentPagePopup(popup);
         }, 150); // дебаунс 150 мс — группируем шквал мутаций в один вызов
 
         mainObserver = new MutationObserver(onMutation);
@@ -743,6 +791,21 @@ window.MUModeration = (function() {
             if (card) { activeCard = card; popupFilled = false; }
         }, true);
 
+        // Трекинг комментария на страницах манги/аниме
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.comment__dropdown, button.comment__dropdown');
+            if (btn) {
+                activeComment = btn.closest('.comment');
+                popupFilled = false;
+            }
+            // Также отслеживаем кнопку "жалоба" если она открывает попап напрямую
+            const complainBtn = e.target.closest('button');
+            if (complainBtn?.innerText?.trim() === 'жалоба') {
+                activeComment = complainBtn.closest('.comment');
+                popupFilled = false;
+            }
+        }, true);
+
         setupHotkeys();
         startObserver();
 
@@ -753,6 +816,6 @@ window.MUModeration = (function() {
         MU.log('Moderation', 'Модуль запущен');
     }
 
-    return { init };
+    return { init, selectReason };
 
 })();

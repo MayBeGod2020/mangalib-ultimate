@@ -8,7 +8,8 @@ window.MUAiVerdict = (function () {
 
     const PANEL_ID = 'mu-ai-verdict';
 
-    const RULES_PROMPT = `Ты — помощник модератора на аниме/манга сайте. Тебе дают текст комментария и причину жалобы. Твоя задача — кратко и чётко ответить, нарушает ли комментарий правила.
+    // Промпт для проверки (причина жалобы известна)
+    const VERIFY_PROMPT = `Ты — помощник модератора на аниме/манга сайте. Тебе дают текст комментария и причину жалобы. Твоя задача — кратко и чётко ответить, нарушает ли комментарий правила.
 
 Правила сайта:
 1. Оскорбления — прямые/завуалированные оскорбления пользователей, переводчиков, авторов (от 7 дней)
@@ -18,12 +19,33 @@ window.MUAiVerdict = (function () {
 5. Провокации / Конфликты — политика, религия, конфликты по жанрам (от 3 дней)
 6. Ненормативная лексика — текст состоит преимущественно из мата (отдельно)
 7. Запрещённый контент — суицид, насилие, пропаганда, сексуальный контент (от 7 дней)
-8. Бессмысленная тема (форум) — личные проблемы, глупые вопросы, не та категория (от 1 дня)
-9. Дубликат темы (форум) — тема уже существует (от 6 часов)
-10. Некорректный заголовок (форум) — заголовок не отражает содержание, капс, мат (от 2 часов)
 
-Ответ строго в формате JSON (без markdown, без блоков кода):
-{"verdict":"нарушает"|"не нарушает"|"спорно","rule":"название правила или пусто","confidence":"высокая"|"средняя"|"низкая","reason":"1-2 предложения объяснения"}`;
+Ответ строго в формате JSON (без markdown):
+{"verdict":"нарушает"|"не нарушает"|"спорно","rule":"название правила или пусто","confidence":"высокая"|"средняя"|"низкая","reason":"1-2 предложения объяснения","reason_key":""}`;
+
+    // Промпт для автовыбора (причина неизвестна — страница манги)
+    const CLASSIFY_PROMPT = `Ты — помощник модератора на аниме/манга сайте. Тебе дают текст комментария. Определи, нарушает ли он правила, и если да — выбери точную причину из списка.
+
+Правила сайта:
+1. Оскорбления — прямые/завуалированные оскорбления пользователей, переводчиков, авторов (от 7 дней)
+2. Флуд / Оффтоп — бессмысленные комментарии, капс, дублирование, «ура глава», «а когда глава?» (от 1 дня)
+3. Спойлеры — раскрытие сюжета без тега [spoiler] (от 2 дней)
+4. Реклама / Спам — ссылки на конкурентов, призывы перейти на другой сайт (от 5 дней)
+5. Провокации / Конфликты — политика, религия, конфликты по жанрам (от 3 дней)
+6. Ненормативная лексика — текст состоит преимущественно из мата (отдельно)
+7. Запрещённый контент — суицид, насилие, пропаганда, сексуальный контент (от 7 дней)
+
+Допустимые значения поля reason_key (выбери одно точно из списка или оставь пустым если не нарушает):
+"оскорбление пользователей"
+"флуд / оффтоп / комментарий без смысла"
+"спойлер"
+"реклама / спам"
+"провокации / конфликты"
+"ненормативная лексика"
+"запрещенный / непотребный контент"
+
+Ответ строго в формате JSON (без markdown):
+{"verdict":"нарушает"|"не нарушает"|"спорно","rule":"название правила или пусто","confidence":"высокая"|"средняя"|"низкая","reason":"1-2 предложения объяснения","reason_key":"точное значение из списка выше или пусто"}`;
 
     // ==================== UI ====================
 
@@ -122,8 +144,8 @@ window.MUAiVerdict = (function () {
 
         // Кнопка «Перепроверить»
         document.getElementById('mu-ai-rerun')?.addEventListener('click', () => {
-            if (data._commentText && data._reason) {
-                analyze(data._commentText, data._reason);
+            if (data._commentText !== undefined) {
+                analyze(data._commentText, data._reason || '', data._popup || null);
             }
         });
 
@@ -133,13 +155,17 @@ window.MUAiVerdict = (function () {
 
     // ==================== API ====================
 
-    async function analyze(commentText, reason) {
+    async function analyze(commentText, reason, popup = null) {
         const apiKey = settings?.ai?.deepseekKey;
         if (!apiKey) return;
 
         showPanel('loading');
 
-        const userMessage = `Причина жалобы: ${reason}\n\nТекст комментария:\n${commentText}`;
+        const isClassifyMode = !reason; // нет причины — режим автовыбора
+        const systemPrompt   = isClassifyMode ? CLASSIFY_PROMPT : VERIFY_PROMPT;
+        const userMessage    = isClassifyMode
+            ? `Текст комментария:\n${commentText}`
+            : `Причина жалобы: ${reason}\n\nТекст комментария:\n${commentText}`;
 
         try {
             const controller = new AbortController();
@@ -155,8 +181,7 @@ window.MUAiVerdict = (function () {
                 body: JSON.stringify({
                     model: 'deepseek-v4-flash',
                     messages: [
-                        // prefix_cache_id кешируется автоматически по совпадению префикса
-                        { role: 'system', content: RULES_PROMPT },
+                        { role: 'system', content: systemPrompt },
                         { role: 'user',   content: userMessage },
                     ],
                     max_tokens: 200,
@@ -180,7 +205,12 @@ window.MUAiVerdict = (function () {
                 throw new Error('Не удалось разобрать ответ ИИ');
             }
 
-            showPanel('result', { ...parsed, _commentText: commentText, _reason: reason });
+            showPanel('result', { ...parsed, _commentText: commentText, _reason: reason, _popup: popup });
+
+            // В режиме автовыбора — подставляем причину в дропдаун попапа
+            if (isClassifyMode && parsed.reason_key && popup && document.body.contains(popup)) {
+                window.MUModeration?.selectReason(popup, parsed.reason_key);
+            }
 
         } catch (err) {
             if (err.name === 'AbortError') return;
@@ -193,9 +223,9 @@ window.MUAiVerdict = (function () {
     // ==================== ИНТЕГРАЦИЯ ====================
 
     // Вызывается из moderation.js когда открывается попап
-    function onPopupOpen(commentText, reason) {
+    function onPopupOpen(commentText, reason, popup = null) {
         if (!settings?.ai?.enabled || !settings?.ai?.deepseekKey) return;
-        analyze(commentText, reason);
+        analyze(commentText, reason, popup);
     }
 
     function onPopupClose() {
