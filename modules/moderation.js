@@ -202,30 +202,49 @@ window.MUModeration = (function() {
 
     // ==================== СЕЛЕКТОРЫ КАРТОЧЕК ====================
 
-    // CSS-классы на сайте меняются при каждом деплое — используем несколько вариантов
-    const CARD_SEL   = '.abz_ab0, .report-card, [class*="report-card"], [class*="abz_ab"]';
-    const HEADER_SEL = '.abz_ah, [class*="abz_ah"], [class*="report-header"]';
+    // Карточка на странице модерации — div.comment внутри .reports-container
+    // Оставляем старые классы как запасной вариант
+    const CARD_SEL   = '.reports-container .comment, .abz_ab0, [class*="abz_ab"]';
+    const HEADER_SEL = '.abz_ah, [class*="abz_ah"], .comment__head, [class*="report-header"]';
 
     // Причина жалобы — ищем по нескольким возможным селекторам
     function getCardReason(card) {
-        // Вариант 1: span с классом abz_gb
+        // Вариант 1: старые классы
         const byClass = card.querySelector('.abz_gb, [class*="abz_gb"]')?.innerText?.trim().toLowerCase();
         if (byClass) return byClass;
 
-        // Вариант 2: первый span в header-элементе
-        const header = card.querySelector(HEADER_SEL);
-        if (header) {
-            const firstSpan = header.querySelector('span');
-            if (firstSpan) return firstSpan.innerText?.trim().toLowerCase() || '';
+        // Вариант 2: ищем текст из REASON_MAP в первых строках карточки (до comment__body)
+        // Смотрим только верхнюю часть карточки (не comment__body где лежат ссылки)
+        const head = card.cloneNode(true);
+        head.querySelector('.comment__body')?.remove();
+        const headText = head.innerText?.toLowerCase() || '';
+        for (const reason of Object.keys(REASON_MAP)) {
+            if (headText.includes(reason)) return reason;
         }
 
-        // Вариант 3: ищем текст из REASON_MAP в card
+        // Вариант 3: весь текст карточки
         const cardText = card.innerText?.toLowerCase() || '';
         for (const reason of Object.keys(REASON_MAP)) {
             if (cardText.includes(reason)) return reason;
         }
 
         return '';
+    }
+
+    // Находит элемент с текстом причины внутри карточки (для цветовой подсветки)
+    function getReasonElement(card) {
+        // Пробуем старый класс
+        const old = card.querySelector('.abz_gb, [class*="abz_gb"]');
+        if (old) return old;
+
+        // Ищем span/div в верхней части карточки, чей текст совпадает с причиной
+        const reason = getCardReason(card);
+        if (!reason) return null;
+        const allEls = [...card.querySelectorAll('span, div, a')];
+        return allEls.find(el =>
+            el.children.length === 0 &&
+            el.innerText?.trim().toLowerCase() === reason
+        ) || null;
     }
 
     // Причина с заглавной буквой для отображения
@@ -308,16 +327,15 @@ window.MUModeration = (function() {
             if (card.dataset.colored) return;
             card.dataset.colored = 'true';
 
-            const reason = getCardReason(card).toLowerCase();
+            const reason = getCardReason(card);
             const color  = REASON_COLORS[reason];
             if (!color) return;
 
             card.style.borderLeft  = `4px solid ${color}`;
             card.style.paddingLeft = '8px';
 
-            const badge = card.querySelector(HEADER_SEL);
-            if (badge) {
-                const reasonEl = badge.firstElementChild || badge;
+            const reasonEl = getReasonElement(card);
+            if (reasonEl) {
                 reasonEl.style.backgroundColor = color;
                 reasonEl.style.color           = '#fff';
                 reasonEl.style.padding         = '2px 6px';
