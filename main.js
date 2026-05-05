@@ -45,7 +45,10 @@
         // 5. Settings UI (кнопка ⚙️)
         const settingsModule = await window.MUSettingsUI.init();
 
-        // 6. Dashboard — последний, чтобы быть рядом с шестерёнкой
+        // 6. User Tooltip — попап при наведении на ник
+        await window.MUUserTooltip.init();
+
+        // 7. Dashboard — последний, чтобы быть рядом с шестерёнкой
         const dashboardModule = await window.MUDashboard.init();
 
         // Встраиваем кнопки в контейнер в правом верхнем углу

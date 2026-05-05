@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mangalib Ultimate Helper",
-  "version": "2.2",
+  "version": "2.3",
   "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
 
   "icons": {
@@ -46,6 +46,7 @@
         "modules/ai-verdict.js",
         "modules/dashboard.js",
         "modules/settings-ui.js",
+        "modules/user-tooltip.js",
         "main.js"
       ],
       "run_at": "document_idle"
