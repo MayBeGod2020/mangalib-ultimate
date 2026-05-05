@@ -202,12 +202,30 @@ window.MUModeration = (function() {
 
     // ==================== СЕЛЕКТОРЫ КАРТОЧЕК ====================
 
-    const CARD_SEL   = '.abz_ab0';
-    const HEADER_SEL = '.abz_ah';
+    // CSS-классы на сайте меняются при каждом деплое — используем несколько вариантов
+    const CARD_SEL   = '.abz_ab0, .report-card, [class*="report-card"], [class*="abz_ab"]';
+    const HEADER_SEL = '.abz_ah, [class*="abz_ah"], [class*="report-header"]';
 
-    // Причина жалобы всегда в span.abz_gb (первый дочерний элемент заголовка .abz_ah)
+    // Причина жалобы — ищем по нескольким возможным селекторам
     function getCardReason(card) {
-        return card.querySelector('.abz_gb')?.innerText?.trim().toLowerCase() || '';
+        // Вариант 1: span с классом abz_gb
+        const byClass = card.querySelector('.abz_gb, [class*="abz_gb"]')?.innerText?.trim().toLowerCase();
+        if (byClass) return byClass;
+
+        // Вариант 2: первый span в header-элементе
+        const header = card.querySelector(HEADER_SEL);
+        if (header) {
+            const firstSpan = header.querySelector('span');
+            if (firstSpan) return firstSpan.innerText?.trim().toLowerCase() || '';
+        }
+
+        // Вариант 3: ищем текст из REASON_MAP в card
+        const cardText = card.innerText?.toLowerCase() || '';
+        for (const reason of Object.keys(REASON_MAP)) {
+            if (cardText.includes(reason)) return reason;
+        }
+
+        return '';
     }
 
     // Причина с заглавной буквой для отображения
@@ -893,7 +911,22 @@ window.MUModeration = (function() {
         }, true);
 
         document.addEventListener('click', (e) => {
-            const card = e.target.closest(CARD_SEL);
+            // Пробуем точный селектор
+            let card = e.target.closest(CARD_SEL);
+
+            // Фолбэк: ищем карточку по содержимому — у неё есть ссылки "перейти"/"ветка"/"удалить"
+            if (!card && location.href.includes('/moderation')) {
+                let el = e.target;
+                while (el && el !== document.body) {
+                    const texts = [...(el.querySelectorAll?.('a, button') || [])].map(b => b.innerText?.trim());
+                    if (texts.includes('перейти') || texts.includes('удалить')) {
+                        card = el;
+                        break;
+                    }
+                    el = el.parentElement;
+                }
+            }
+
             if (card) { activeCard = card; popupFilled = false; }
         }, true);
 
