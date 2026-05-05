@@ -484,6 +484,13 @@ window.MUSettingsUI = (function () {
                 </div>
                 ${renderToggle('ai', 'enabled', ai.enabled)}
             </div>
+            <div class="mu-setting-row">
+                <div>
+                    <div class="mu-setting-label">Кнопка сканирования страницы</div>
+                    <div class="mu-setting-desc">Показывать кнопку "🔍 Проверить страницу" на страницах с комментариями</div>
+                </div>
+                ${renderToggle('ai', 'showScanButton', ai.showScanButton)}
+            </div>
 
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
                 <div class="mu-setting-label">DeepSeek API ключ</div>

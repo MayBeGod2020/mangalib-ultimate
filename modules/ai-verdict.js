@@ -267,9 +267,252 @@ window.MUAiVerdict = (function () {
 
     // ==================== INIT ====================
 
+    // ==================== БАТЧ-СКАНИРОВАНИЕ ====================
+
+    const BATCH_PROMPT = `Ты — помощник модератора аниме/манга сайта. Тебе дан пронумерованный список комментариев. Найди те, что нарушают правила:
+
+1. Оскорбления пользователей, переводчиков, авторов
+2. Флуд / оффтоп / бессмысленный текст («ура глава», «а когда?», наборы символов)
+3. Спойлеры без тега [spoiler]
+4. Реклама / ссылки на конкурентов
+5. Провокации, политика, религия
+6. Ненормативная лексика (преимущественно мат)
+7. Запрещённый контент (насилие, суицид, пропаганда)
+
+Верни ТОЛЬКО JSON без markdown:
+{"suspicious":[{"id":1,"reason_key":"оскорбление пользователей","short":"краткое пояснение"},...]}
+Если нарушений нет — {"suspicious":[]}`;
+
+    const BATCH_SIZE   = 50;
+    let   batchRunning = false;
+
+    function extractText(comment) {
+        const el = comment.querySelector('.comment__content');
+        if (!el) return '';
+        return (el.textContent || el.innerText || '').trim().substring(0, 300);
+    }
+
+    const SHORT_LABELS = {
+        'оскорбление пользователей':              'Оскорбление',
+        'флуд / оффтоп / комментарий без смысла': 'Флуд',
+        'спойлер':                                'Спойлер',
+        'реклама / спам':                         'Реклама',
+        'провокации / конфликты':                 'Провокация',
+        'ненормативная лексика':                  'Мат',
+        'запрещенный / непотребный контент':      'Запрещённый контент',
+    };
+
+    function markComment(comment, reasonKey, short) {
+        if (comment.dataset.aiBadged) return;
+        comment.dataset.aiBadged = 'true';
+
+        const colors = {
+            'оскорбление пользователей':              '#e74c3c',
+            'флуд / оффтоп / комментарий без смысла': '#f39c12',
+            'спойлер':                                '#9b59b6',
+            'реклама / спам':                         '#e67e22',
+            'провокации / конфликты':                 '#e67e22',
+            'ненормативная лексика':                  '#e74c3c',
+            'запрещенный / непотребный контент':      '#c0392b',
+        };
+        const color = colors[reasonKey] || '#e74c3c';
+        const label = SHORT_LABELS[reasonKey] || reasonKey;
+
+        const badge = document.createElement('span');
+        badge.dataset.aiBadge = 'true';
+        badge.title = short || reasonKey; // полный текст при наведении
+        badge.style.cssText = `
+            display:inline-flex;align-items:center;gap:3px;
+            margin-left:8px;padding:2px 7px;border-radius:10px;
+            background:${color}22;border:1px solid ${color};
+            color:${color};font-size:10px;font-weight:600;
+            cursor:default;vertical-align:middle;
+            white-space:nowrap;flex-shrink:0;
+        `;
+        badge.textContent = `🚩 ${label}`;
+
+        // Вставляем рядом с именем автора
+        const head = comment.querySelector('.comment__head, .comment-author__name');
+        if (head) {
+            head.style.flexWrap = 'nowrap';
+            head.style.display  = 'flex';
+            head.style.alignItems = 'center';
+            head.appendChild(badge);
+        }
+    }
+
+    function clearBadges() {
+        document.querySelectorAll('[data-ai-badge]').forEach(el => el.remove());
+        document.querySelectorAll('[data-ai-badged]').forEach(el => delete el.dataset.aiBadged);
+    }
+
+    async function batchScanPage() {
+        if (batchRunning) return;
+        const apiKey = settings?.ai?.deepseekKey;
+        if (!apiKey || !settings?.ai?.enabled) {
+            alert('Включите ИИ и добавьте API ключ в настройках (⚙️ → 🤖 ИИ)');
+            return;
+        }
+
+        const comments = [...document.querySelectorAll('.comment')].filter(c => {
+            const text = extractText(c);
+            return text.length > 3 && !c.dataset.aiBadged;
+        });
+
+        if (comments.length === 0) {
+            showBatchStatus('Нет новых комментариев для проверки', '#2ecc71');
+            return;
+        }
+
+        batchRunning = true;
+        updateScanButton(true);
+        clearBadges();
+
+        let flagged = 0;
+        const total = comments.length;
+
+        // Разбиваем на батчи по BATCH_SIZE
+        for (let i = 0; i < comments.length; i += BATCH_SIZE) {
+            const batch  = comments.slice(i, i + BATCH_SIZE);
+            const listed = batch.map((c, idx) => `[${i + idx + 1}] ${extractText(c)}`).join('\n');
+
+            showBatchStatus(`Сканирую ${i + 1}–${Math.min(i + BATCH_SIZE, total)} из ${total}…`, '#f39c12');
+
+            try {
+                const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            { role: 'system', content: BATCH_PROMPT },
+                            { role: 'user',   content: listed },
+                        ],
+                        max_tokens: 800,
+                        temperature: 0.1,
+                        response_format: { type: 'json_object' },
+                    }),
+                });
+
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                const data = await resp.json();
+                const raw  = data.choices?.[0]?.message?.content?.trim() || '{}';
+                MU.log('AiVerdict', 'Batch raw:', raw);
+
+                let parsed;
+                try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+                (parsed.suspicious || []).forEach(item => {
+                    const globalIdx = item.id - 1; // id начинается с 1
+                    const comment   = comments[globalIdx];
+                    if (comment) {
+                        markComment(comment, item.reason_key, item.short);
+                        flagged++;
+                    }
+                });
+
+            } catch (err) {
+                MU.log('AiVerdict', 'Batch error:', err.message);
+            }
+        }
+
+        batchRunning = false;
+        updateScanButton(false);
+        showBatchStatus(
+            flagged > 0 ? `🚩 Найдено нарушений: ${flagged} из ${total}` : `✅ Нарушений не найдено (${total} комм.)`,
+            flagged > 0 ? '#e74c3c' : '#2ecc71'
+        );
+    }
+
+    // ==================== КНОПКА СКАНИРОВАНИЯ ====================
+
+    const SCAN_BTN_ID   = 'mu-batch-scan-btn';
+    const SCAN_STATUS_ID = 'mu-batch-status';
+
+    function showBatchStatus(text, color) {
+        let el = document.getElementById(SCAN_STATUS_ID);
+        if (!el) {
+            el = document.createElement('div');
+            el.id = SCAN_STATUS_ID;
+            el.style.cssText = `
+                position:fixed;bottom:68px;left:24px;z-index:999998;
+                padding:8px 14px;border-radius:8px;font-size:12px;
+                font-family:-apple-system,sans-serif;font-weight:600;
+                box-shadow:0 4px 12px rgba(0,0,0,0.5);
+                transition:all 0.3s;
+            `;
+            document.body.appendChild(el);
+        }
+        el.textContent = text;
+        el.style.background = color + '22';
+        el.style.border = `1px solid ${color}`;
+        el.style.color  = color;
+        clearTimeout(el._timer);
+        if (!batchRunning) el._timer = setTimeout(() => el.remove(), 5000);
+    }
+
+    function updateScanButton(running) {
+        const btn = document.getElementById(SCAN_BTN_ID);
+        if (!btn) return;
+        btn.textContent = running ? '⏳ Сканирую…' : '🔍 Проверить страницу';
+        btn.disabled    = running;
+        btn.style.opacity = running ? '0.7' : '1';
+    }
+
+    function injectScanButton() {
+        if (document.getElementById(SCAN_BTN_ID)) return;
+
+        // Показываем только если включено в настройках, на страницах с комментариями (не на странице модерации)
+        const hasComments    = document.querySelector('.comment__content');
+        const isModerationPg = location.href.includes('/moderation');
+        if (!hasComments || isModerationPg) return;
+        if (!settings?.ai?.showScanButton) return;
+
+        const btn = document.createElement('button');
+        btn.id = SCAN_BTN_ID;
+        btn.textContent = '🔍 Проверить страницу';
+        btn.style.cssText = `
+            position:fixed;bottom:24px;left:24px;z-index:999998;
+            padding:7px 14px;border-radius:20px;border:1px solid #f39c12;
+            background:rgba(243,156,18,0.12);color:#f39c12;
+            font-size:12px;font-weight:600;cursor:pointer;
+            font-family:-apple-system,sans-serif;
+            box-shadow:0 4px 12px rgba(0,0,0,0.4);
+            transition:all 0.2s;
+        `;
+        btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(243,156,18,0.25)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(243,156,18,0.12)'; });
+        btn.addEventListener('click', batchScanPage);
+        document.body.appendChild(btn);
+    }
+
+    // ==================== INIT ====================
+
     async function init() {
         settings = await MU.getSettings();
-        MU.on('settingsChanged', s => { settings = s; });
+        MU.on('settingsChanged', s => {
+            settings = s;
+            // Реагируем на изменение галочки showScanButton
+            if (!s?.ai?.showScanButton) {
+                document.getElementById(SCAN_BTN_ID)?.remove();
+                document.getElementById(SCAN_STATUS_ID)?.remove();
+            } else {
+                setTimeout(injectScanButton, 300);
+            }
+        });
+
+        // Инжектируем кнопку когда страница готова
+        setTimeout(injectScanButton, 2000);
+        MU.on('urlChanged', () => {
+            document.getElementById(SCAN_BTN_ID)?.remove();
+            document.getElementById(SCAN_STATUS_ID)?.remove();
+            setTimeout(injectScanButton, 2000);
+        });
+
         MU.log('AiVerdict', 'Модуль запущен');
     }
 
