@@ -359,11 +359,15 @@ window.MUModeration = (function() {
             || (location.href.includes('/moderation') && !!document.querySelector('.reports-container'));
         if (!onModPage) return;
 
+        const cards = document.querySelectorAll(CARD_SEL);
+        MU.log('Moderation', `buildFilterPanel: ${cards.length} карточек найдено`);
+
         const reasons = new Set();
-        document.querySelectorAll(CARD_SEL).forEach(card => {
+        cards.forEach(card => {
             const text = getCardReason(card);
             if (text) reasons.add(text);
         });
+        MU.log('Moderation', `buildFilterPanel: причины = [${[...reasons].join(', ')}]`);
         if (reasons.size === 0) return;
 
         const existing = document.getElementById('mod-filter-panel');
@@ -449,8 +453,14 @@ window.MUModeration = (function() {
 
         updateMassButton();
 
-        const firstCard = document.querySelector(CARD_SEL);
-        firstCard?.parentElement?.insertBefore(panel, firstCard);
+        // Вставляем панель перед контейнером жалоб
+        const container = document.querySelector('.reports-container');
+        if (container) {
+            container.insertAdjacentElement('beforebegin', panel);
+        } else {
+            const firstCard = document.querySelector(CARD_SEL);
+            firstCard?.parentElement?.insertBefore(panel, firstCard);
+        }
     }
 
     async function massDeleteVisible() {
