@@ -466,10 +466,12 @@ window.MUAiVerdict = (function () {
     function injectScanButton() {
         if (document.getElementById(SCAN_BTN_ID)) return;
 
-        // Показываем только если включено в настройках, на страницах с комментариями (не на странице модерации)
-        const hasComments    = document.querySelector('.comment__content');
-        const isModerationPg = location.href.includes('/moderation');
-        if (!hasComments || isModerationPg) return;
+        // Показываем только если включено в настройках и есть комментарии
+        // Разрешаем на /moderation/comments, блокируем только на /moderation/ (список жалоб)
+        const hasComments      = document.querySelector('.comment__content, .comment__body');
+        const isModListPage    = /\/moderation\/?$/.test(location.pathname) ||
+                                 /\/moderation\/(?!comments)/.test(location.pathname);
+        if (!hasComments || isModListPage) return;
         if (!settings?.ai?.showScanButton) return;
 
         const btn = document.createElement('button');

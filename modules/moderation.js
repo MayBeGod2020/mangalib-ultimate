@@ -169,7 +169,10 @@ window.MUModeration = (function() {
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
-            const select = popup.querySelector('select.form-input__field');
+            // Ищем select — сначала по классу, потом любой в попапе
+            const select = popup.querySelector('select.form-input__field')
+                        || popup.querySelector('select[class*="form-input"]')
+                        || popup.querySelector('select');
             if (!select) { if (attempts >= 10) clearInterval(interval); return; }
             const option = [...select.options].find(o => o.value === value);
             if (option) option.selected = true;
@@ -188,7 +191,8 @@ window.MUModeration = (function() {
         if (setting === undefined || setting === null || setting === 'default') return;
 
         setTimeout(() => {
-            const checkbox = popup.querySelector('.control__input[type="checkbox"]');
+            const checkbox = popup.querySelector('.control__input[type="checkbox"]')
+                          || popup.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
             const shouldCheck = (setting === true || setting === 'checked');
             if (shouldCheck && !checkbox.checked) checkbox.click();
@@ -211,11 +215,78 @@ window.MUModeration = (function() {
         return reason.charAt(0).toUpperCase() + reason.slice(1);
     }
 
+    // ==================== ИСТОРИЯ БАНОВ НА КАРТОЧКАХ ====================
+
+    const BAN_CACHE = {};
+
+    async function fetchBanCount(userId) {
+        if (BAN_CACHE[userId] !== undefined) return BAN_CACHE[userId];
+        try {
+            const resp = await fetch(
+                `https://api.cdnlibs.org/api/user/${userId}?fields[]=ban_info`
+            );
+            if (!resp.ok) { BAN_CACHE[userId] = null; return null; }
+            const json = await resp.json();
+            // ban_info.count если есть, иначе просто факт наличия бана
+            const info = json?.data?.ban_info;
+            BAN_CACHE[userId] = info ?? null;
+            return BAN_CACHE[userId];
+        } catch { BAN_CACHE[userId] = null; return null; }
+    }
+
+    async function injectBanBadge(card) {
+        if (card.dataset.banChecked) return;
+        card.dataset.banChecked = 'true';
+
+        // Ищем ссылку на профиль пользователя в карточке
+        const userLink = card.querySelector('a[href*="/user/"]');
+        if (!userLink) return;
+
+        const match = userLink.href?.match(/\/user\/(\d+)/);
+        if (!match) return;
+        const userId = match[1];
+
+        const banInfo = await fetchBanCount(userId);
+
+        // Находим блок автора
+        const authorEl = card.querySelector('.comment-author__name')
+                       || card.querySelector('[class*="comment-author"]')
+                       || userLink;
+        if (!authorEl) return;
+
+        // Удаляем старый бейдж если есть
+        authorEl.parentElement?.querySelector('.mu-ban-count')?.remove();
+
+        if (banInfo) {
+            // Пользователь сейчас забанен
+            const badge = document.createElement('span');
+            badge.className = 'mu-ban-count';
+            const until = banInfo.expires_at
+                ? `до ${new Date(banInfo.expires_at).toLocaleDateString('ru')}`
+                : 'навсегда';
+            badge.title = `Забанен ${until}`;
+            badge.style.cssText = `
+                display:inline-flex;align-items:center;gap:3px;
+                margin-left:6px;padding:1px 6px;border-radius:8px;
+                background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.5);
+                color:#e74c3c;font-size:10px;font-weight:700;
+                cursor:default;vertical-align:middle;white-space:nowrap;
+            `;
+            badge.textContent = `🔨 в бане`;
+            authorEl.parentElement
+                ? authorEl.insertAdjacentElement('afterend', badge)
+                : authorEl.appendChild(badge);
+        }
+    }
+
     // ==================== ЦВЕТОВАЯ КОДИРОВКА ====================
 
     function colorizeCards() {
         if (!settings?.moderation?.colorizeCards) return;
         document.querySelectorAll(CARD_SEL).forEach(card => {
+            // Бейдж банов — всегда, независимо от colorize
+            injectBanBadge(card);
+
             if (card.dataset.colored) return;
             card.dataset.colored = 'true';
 
@@ -568,13 +639,15 @@ window.MUModeration = (function() {
         if (!settings?.moderation?.autoFillPopup) return;
         if (!activeCard || popupFilled) return;
 
-        const textareas = popup.querySelectorAll('textarea.form-input__field');
+        // Ищем textarea — сначала рядом с лейблом, потом любую
         let textarea = null;
-        for (const ta of textareas) {
-            if (ta.closest('.form-group')?.innerText.includes('Комментарий от модератора')) {
-                textarea = ta; break;
-            }
+        const allTa = popup.querySelectorAll('textarea');
+        for (const ta of allTa) {
+            const parent = ta.closest('.form-group, [class*="form-group"], [class*="field"], [class*="group"]');
+            const label  = parent?.textContent || '';
+            if (label.includes('Комментарий от модератора')) { textarea = ta; break; }
         }
+        if (!textarea && allTa.length > 0) textarea = allTa[allTa.length - 1];
         if (!textarea) return;
         popupFilled = true;
 
@@ -740,7 +813,10 @@ window.MUModeration = (function() {
                 buildFilterPanel();
             }
 
-            const popup    = document.querySelector('.popup-body');
+            const popup    = document.querySelector('.popup-body')
+                          || document.querySelector('[class*="popup__body"]')
+                          || document.querySelector('[class*="popup-body"]')
+                          || document.querySelector('.modal-body');
             const hasPopup = !!popup;
 
             // Попап закрылся
