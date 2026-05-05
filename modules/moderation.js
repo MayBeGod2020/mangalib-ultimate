@@ -213,17 +213,18 @@ window.MUModeration = (function() {
         const byClass = card.querySelector('.abz_gb, [class*="abz_gb"]')?.innerText?.trim().toLowerCase();
         if (byClass) return byClass;
 
-        // Вариант 2: ищем текст из REASON_MAP в первых строках карточки (до comment__body)
-        // Смотрим только верхнюю часть карточки (не comment__body где лежат ссылки)
+        // Вариант 2: верхняя часть карточки без comment__body
+        // ВАЖНО: клонированный элемент не в DOM — используем textContent, не innerText
         const head = card.cloneNode(true);
         head.querySelector('.comment__body')?.remove();
-        const headText = head.innerText?.toLowerCase() || '';
+        head.querySelector('.comment__content')?.remove();
+        const headText = (head.textContent || '').toLowerCase().replace(/\s+/g, ' ');
         for (const reason of Object.keys(REASON_MAP)) {
             if (headText.includes(reason)) return reason;
         }
 
-        // Вариант 3: весь текст карточки
-        const cardText = card.innerText?.toLowerCase() || '';
+        // Вариант 3: весь textContent карточки (textContent читает скрытые элементы)
+        const cardText = (card.textContent || '').toLowerCase().replace(/\s+/g, ' ');
         for (const reason of Object.keys(REASON_MAP)) {
             if (cardText.includes(reason)) return reason;
         }
