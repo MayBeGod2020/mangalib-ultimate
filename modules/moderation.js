@@ -294,14 +294,18 @@ window.MUModeration = (function() {
         // Удаляем старый бейдж если есть
         authorEl.parentElement?.querySelector('.mu-ban-count')?.remove();
 
-        if (banInfo) {
-            // Пользователь сейчас забанен
+        // ban_info — массив активных банов
+        const bans = Array.isArray(banInfo) ? banInfo : (banInfo ? [banInfo] : []);
+        if (bans.length > 0) {
+            const ban   = bans[0]; // берём первый (актуальный)
+            const until = ban.expired_at
+                ? `до ${new Date(ban.expired_at).toLocaleDateString('ru', { day:'2-digit', month:'2-digit', year:'numeric' })}`
+                : 'навсегда';
+            const reason = ban.reason?.label || '—';
+
             const badge = document.createElement('span');
             badge.className = 'mu-ban-count';
-            const until = banInfo.expires_at
-                ? `до ${new Date(banInfo.expires_at).toLocaleDateString('ru')}`
-                : 'навсегда';
-            badge.title = `Забанен ${until}`;
+            badge.title = `${reason} · ${until}`;
             badge.style.cssText = `
                 display:inline-flex;align-items:center;gap:3px;
                 margin-left:6px;padding:1px 6px;border-radius:8px;
@@ -309,7 +313,7 @@ window.MUModeration = (function() {
                 color:#e74c3c;font-size:10px;font-weight:700;
                 cursor:default;vertical-align:middle;white-space:nowrap;
             `;
-            badge.textContent = `🔨 в бане`;
+            badge.textContent = `🔨 ${until}`;
             authorEl.parentElement
                 ? authorEl.insertAdjacentElement('afterend', badge)
                 : authorEl.appendChild(badge);

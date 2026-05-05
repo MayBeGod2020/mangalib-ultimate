@@ -173,19 +173,20 @@ window.MUUserTooltip = (function () {
                 ${roles ? `<div class="mu-tt-row">🎭 Роли: <b>${roles}</b></div>` : ''}
             `;
 
-            // Бан
-            if (data.ban_info) {
-                const ban = data.ban_info;
-                const until = ban.expires_at
-                    ? `до ${new Date(ban.expires_at).toLocaleDateString('ru')}`
-                    : 'навсегда';
-                const reason = ban.reason || ban.comment || '—';
-                const banEl = document.createElement('div');
-                banEl.className = 'mu-tt-banned';
-                banEl.innerHTML = `🔨 <b>Забанен ${until}</b><br><span style="opacity:0.8">${reason}</span>`;
-                tip.appendChild(banEl);
-
-                // Красная рамка
+            // Бан — ban_info это массив активных банов
+            const bans = Array.isArray(data.ban_info) ? data.ban_info : (data.ban_info ? [data.ban_info] : []);
+            if (bans.length > 0) {
+                bans.forEach(ban => {
+                    const until = ban.expired_at
+                        ? `до ${new Date(ban.expired_at).toLocaleDateString('ru', { day:'2-digit', month:'2-digit', year:'numeric' })}`
+                        : 'навсегда';
+                    const reason = ban.reason?.label || ban.reason || '—';
+                    const type   = ban.type === 'social' ? 'Соц.' : ban.type === 'functional' ? 'Функц.' : '';
+                    const banEl  = document.createElement('div');
+                    banEl.className = 'mu-tt-banned';
+                    banEl.innerHTML = `🔨 <b>Забанен ${until}</b>${type ? ` <span style="opacity:0.6;font-size:10px">(${type})</span>` : ''}<br><span style="opacity:0.8">${reason}</span>`;
+                    tip.appendChild(banEl);
+                });
                 tip.style.borderColor = '#e74c3c44';
             }
 
