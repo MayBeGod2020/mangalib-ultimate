@@ -202,50 +202,41 @@ window.MUModeration = (function() {
 
     // ==================== СЕЛЕКТОРЫ КАРТОЧЕК ====================
 
-    // Карточка на странице модерации — div.comment внутри .reports-container
-    // Оставляем старые классы как запасной вариант
-    const CARD_SEL   = '.reports-container .comment, .abz_ab0, [class*="abz_ab"]';
-    const HEADER_SEL = '.abz_ah, [class*="abz_ah"], .comment__head, [class*="report-header"]';
+    // Структура страницы модерации:
+    //   .reports-container > div.aek_ael (карточка)
+    //     div.aek_ag (заголовок: причина, счётчик, время, репортёр)
+    //       span.aek_f3 ← текст причины
+    //     div.comment.iz_z (тело: аватар, ник, текст комментария, ссылки)
+    // Классы aek_* — хешированные, могут меняться. Используем позиционные селекторы.
+    const CARD_SEL   = '.aek_ael, .abz_ab0, [class*="abz_ab"]';
+    const HEADER_SEL = '.aek_ag, .abz_ah, [class*="abz_ah"]';
 
-    // Причина жалобы — ищем по нескольким возможным селекторам
+    // Причина — первый span в заголовке карточки
     function getCardReason(card) {
-        // Вариант 1: старые классы
-        const byClass = card.querySelector('.abz_gb, [class*="abz_gb"]')?.innerText?.trim().toLowerCase();
-        if (byClass) return byClass;
-
-        // Вариант 2: верхняя часть карточки без comment__body
-        // ВАЖНО: клонированный элемент не в DOM — используем textContent, не innerText
-        const head = card.cloneNode(true);
-        head.querySelector('.comment__body')?.remove();
-        head.querySelector('.comment__content')?.remove();
-        const headText = (head.textContent || '').toLowerCase().replace(/\s+/g, ' ');
-        for (const reason of Object.keys(REASON_MAP)) {
-            if (headText.includes(reason)) return reason;
+        // Заголовок — первый дочерний div карточки (до .comment)
+        const header = card.querySelector(HEADER_SEL)
+                    || card.firstElementChild;
+        if (header) {
+            // Берём текст первого span-а в заголовке
+            const span = header.querySelector('span');
+            if (span) {
+                const t = (span.textContent || '').trim().toLowerCase();
+                if (t) return t;
+            }
         }
 
-        // Вариант 3: весь textContent карточки (textContent читает скрытые элементы)
+        // Фолбэк: ищем причину по всему textContent карточки
         const cardText = (card.textContent || '').toLowerCase().replace(/\s+/g, ' ');
         for (const reason of Object.keys(REASON_MAP)) {
             if (cardText.includes(reason)) return reason;
         }
-
         return '';
     }
 
-    // Находит элемент с текстом причины внутри карточки (для цветовой подсветки)
+    // Элемент с текстом причины для цветовой подсветки
     function getReasonElement(card) {
-        // Пробуем старый класс
-        const old = card.querySelector('.abz_gb, [class*="abz_gb"]');
-        if (old) return old;
-
-        // Ищем span/div в верхней части карточки, чей текст совпадает с причиной
-        const reason = getCardReason(card);
-        if (!reason) return null;
-        const allEls = [...card.querySelectorAll('span, div, a')];
-        return allEls.find(el =>
-            el.children.length === 0 &&
-            el.innerText?.trim().toLowerCase() === reason
-        ) || null;
+        const header = card.querySelector(HEADER_SEL) || card.firstElementChild;
+        return header?.querySelector('span') || null;
     }
 
     // Причина с заглавной буквой для отображения
@@ -276,8 +267,9 @@ window.MUModeration = (function() {
         if (card.dataset.banChecked) return;
         card.dataset.banChecked = 'true';
 
-        // Ищем ссылку на профиль пользователя в карточке
-        const userLink = card.querySelector('a[href*="/user/"]');
+        // Ищем ссылку на профиль пользователя в теле комментария
+        const body     = card.querySelector('.comment') || card;
+        const userLink = body.querySelector('a[href*="/user/"]') || card.querySelector('a[href*="/user/"]');
         if (!userLink) return;
 
         const match = userLink.href?.match(/\/user\/(\d+)/);
@@ -587,10 +579,14 @@ window.MUModeration = (function() {
     }
 
     function getCardData(card) {
-        const reason      = getCardReason(card) || '—';
-        const commentText = extractCommentText(card);
-        const author      = card?.querySelector('.comment-author__name')?.innerText?.trim() || '—';
-        const link        = card?.querySelector('a.btn.variant-primary')?.href || '';
+        const reason = getCardReason(card) || '—';
+        // Тело комментария находится в .comment внутри карточки
+        const body   = card.querySelector('.comment') || card;
+        const commentText = extractCommentText(body);
+        const author = body.querySelector('.comment-author__name')?.innerText?.trim()
+                    || card.querySelector('.comment-author__name')?.innerText?.trim() || '—';
+        const link   = body.querySelector('a.btn.variant-primary')?.href
+                    || card.querySelector('a[href*="/read/"], a[href*="/manga/"]')?.href || '';
 
         const timeEl   = card?.querySelector('time.comment__time');
         const datetime = timeEl?.getAttribute('datetime');
