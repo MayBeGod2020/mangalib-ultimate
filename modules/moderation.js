@@ -353,14 +353,11 @@ window.MUModeration = (function() {
         if (!onModPage) return;
 
         const cards = document.querySelectorAll(CARD_SEL);
-        MU.log('Moderation', `buildFilterPanel: ${cards.length} карточек найдено`);
-
         const reasons = new Set();
         cards.forEach(card => {
             const text = getCardReason(card);
             if (text) reasons.add(text);
         });
-        MU.log('Moderation', `buildFilterPanel: причины = [${[...reasons].join(', ')}]`);
         if (reasons.size === 0) return;
 
         const existing = document.getElementById('mod-filter-panel');
