@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — Mangalib Ultimate Helper</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #222; line-height: 1.7; }
+        h1 { font-size: 24px; border-bottom: 2px solid #f39c12; padding-bottom: 8px; }
+        h2 { font-size: 16px; margin-top: 28px; color: #333; }
+        p, li { font-size: 14px; color: #444; }
+        code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        .updated { color: #888; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: May 2025</p>
+
+    <p>This Privacy Policy describes how the <strong>Mangalib Ultimate Helper</strong> Chrome extension ("Extension") handles user data.</p>
+
+    <h2>1. Data We Do NOT Collect</h2>
+    <p>The Extension does <strong>not</strong> collect, transmit, or store any personal data on our servers. We have no backend that receives your data.</p>
+
+    <h2>2. Data Stored Locally</h2>
+    <p>The following data is stored exclusively in your browser using <code>chrome.storage.sync</code> and <code>chrome.storage.local</code>:</p>
+    <ul>
+        <li>Extension settings (toggles, preferences, theme)</li>
+        <li>Your AI provider API key (entered voluntarily by the user)</li>
+        <li>Moderator watchlist and cached user data</li>
+    </ul>
+    <p>This data never leaves your browser except as described below.</p>
+
+    <h2>3. External Requests Made by the Extension</h2>
+
+    <h3>3.1 AI Providers (optional, user-initiated)</h3>
+    <p>If you enable the AI analysis feature and enter an API key, the Extension will send comment text to your chosen AI provider for moderation analysis. Supported providers:</p>
+    <ul>
+        <li>DeepSeek (api.deepseek.com)</li>
+        <li>OpenAI (api.openai.com)</li>
+        <li>Google Gemini (generativelanguage.googleapis.com)</li>
+        <li>Anthropic Claude (api.anthropic.com)</li>
+        <li>Alibaba Qwen (dashscope.aliyuncs.com)</li>
+        <li>xAI Grok (api.x.ai)</li>
+        <li>Mistral AI (api.mistral.ai)</li>
+    </ul>
+    <p>The API key is stored only in your local browser and is sent only to the provider you select. We do not receive or store this key. Refer to each provider's own privacy policy for how they handle the data.</p>
+
+    <h3>3.2 Lib-family Site API (api.cdnlibs.org)</h3>
+    <p>The Extension queries public user profile data (level, roles, ban history) from the site's API when you hover over a username. This uses the same API that the site itself uses and is subject to the site's own terms of service.</p>
+
+    <h3>3.3 Firebase Realtime Database</h3>
+    <p>The moderator dashboard feature stores online-status timestamps and team announcements in a Firebase Realtime Database. Only moderators with access to the Extension can read or write this data. No personal user data is stored there.</p>
+
+    <h3>3.4 GitHub (update checks)</h3>
+    <p>The Extension periodically checks <code>raw.githubusercontent.com</code> for a new version manifest to notify you of available updates. No user data is sent in this request.</p>
+
+    <h2>4. Permissions Justification</h2>
+    <ul>
+        <li><strong>storage</strong> — to save your settings across sessions and devices</li>
+        <li><strong>alarms</strong> — to schedule daily update checks in the background</li>
+        <li><strong>Host permissions (mangalib.me, ranobelib.me, etc.)</strong> — to inject the Extension's UI into the supported sites</li>
+        <li><strong>Host permissions (AI APIs)</strong> — to send analysis requests to your chosen AI provider</li>
+    </ul>
+
+    <h2>5. Children's Privacy</h2>
+    <p>The Extension is intended for adult moderators of Lib-family sites. We do not knowingly process data from children under 13.</p>
+
+    <h2>6. Changes to This Policy</h2>
+    <p>We may update this policy as the Extension evolves. The updated date at the top of this page reflects the latest revision.</p>
+
+    <h2>7. Contact</h2>
+    <p>If you have questions about this Privacy Policy, please open an issue on the
+    <a href="https://github.com/MayBeGod2020/mangalib-ultimate">GitHub repository</a>.</p>
+</body>
+</html>
