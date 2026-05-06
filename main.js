@@ -66,6 +66,43 @@
         if (settingsBtn) container.appendChild(settingsBtn);
 
         MU.log('Main', 'Все модули запущены');
+
+        // Проверяем наличие обновления
+        checkUpdateBanner();
+    }
+
+    // ==================== БАННЕР ОБНОВЛЕНИЯ ====================
+
+    async function checkUpdateBanner() {
+        const { updateAvailable, updateVersion } = await chrome.storage.local.get(['updateAvailable', 'updateVersion']);
+        if (!updateAvailable) return;
+
+        const current = chrome.runtime.getManifest().version;
+        if (document.getElementById('mu-update-banner')) return;
+
+        const banner = document.createElement('div');
+        banner.id = 'mu-update-banner';
+        banner.style.cssText = `
+            position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+            z-index:9999999;background:#1a1a0a;border:1px solid #f39c12;
+            border-radius:10px;padding:10px 16px;
+            font-family:-apple-system,sans-serif;font-size:13px;
+            display:flex;align-items:center;gap:12px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.6);
+            animation:mu-ai-slide-in 0.3s ease;
+        `;
+        banner.innerHTML = `
+            <span>🔄 Доступна новая версия <b style="color:#f39c12">v${updateVersion}</b> (у вас v${current})</span>
+            <a href="https://github.com/MayBeGod2020/mangalib-ultimate/archive/refs/heads/main.zip"
+               target="_blank"
+               style="padding:5px 12px;background:#f39c12;color:#000;border-radius:6px;
+                      font-weight:700;font-size:12px;text-decoration:none;white-space:nowrap;">
+               ⬇️ Скачать
+            </a>
+            <button onclick="this.closest('#mu-update-banner').remove()"
+                style="background:none;border:none;color:#666;cursor:pointer;font-size:18px;padding:0;line-height:1;">✕</button>
+        `;
+        document.body.appendChild(banner);
     }
 
     // SPA навигация — следим за сменой URL
