@@ -3,6 +3,10 @@
 const GITHUB_MANIFEST_URL =
     'https://raw.githubusercontent.com/MayBeGod2020/mangalib-ultimate/main/manifest.json';
 
+// Ссылка на страницу последнего релиза (для баннера обновления)
+const GITHUB_RELEASES_URL =
+    'https://github.com/MayBeGod2020/mangalib-ultimate/releases/latest';
+
 // ==================== FETCH PROXY (для Firebase CORS) ====================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -36,9 +40,10 @@ async function checkForUpdate() {
         if (isNewer(remote.version, current)) {
             // Сохраняем флаг — контент-скрипт покажет баннер
             await chrome.storage.local.set({
-                updateAvailable: true,
-                updateVersion:   remote.version,
-                updateCheckedAt: Date.now()
+                updateAvailable:  true,
+                updateVersion:    remote.version,
+                updateCheckedAt:  Date.now(),
+                updateReleasesUrl: GITHUB_RELEASES_URL,
             });
         } else {
             await chrome.storage.local.set({

@@ -84,10 +84,14 @@
     // ==================== БАННЕР ОБНОВЛЕНИЯ ====================
 
     async function checkUpdateBanner() {
-        const { updateAvailable, updateVersion } = await chrome.storage.local.get(['updateAvailable', 'updateVersion']);
+        const { updateAvailable, updateVersion, updateReleasesUrl } =
+            await chrome.storage.local.get(['updateAvailable', 'updateVersion', 'updateReleasesUrl']);
         if (!updateAvailable) return;
 
-        const current = chrome.runtime.getManifest().version;
+        const current    = chrome.runtime.getManifest().version;
+        const releaseUrl = updateReleasesUrl ||
+            'https://github.com/MayBeGod2020/mangalib-ultimate/releases/latest';
+
         if (document.getElementById('mu-update-banner')) return;
 
         const banner = document.createElement('div');
@@ -107,8 +111,7 @@
         `;
         banner.innerHTML = `
             <span>🔄 Доступна новая версия <b style="color:var(--mu-accent,#f39c12)">v${updateVersion}</b> (у вас v${current})</span>
-            <a href="https://github.com/MayBeGod2020/mangalib-ultimate/archive/refs/heads/main.zip"
-               target="_blank"
+            <a href="${releaseUrl}" target="_blank"
                style="padding:5px 12px;background:var(--mu-accent,#f39c12);color:#000;border-radius:6px;
                       font-weight:700;font-size:12px;text-decoration:none;white-space:nowrap;">
                ⬇️ Скачать
