@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mangalib Ultimate Helper",
-  "version": "3.2",
+  "version": "3.3",
   "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
 
   "icons": {
@@ -22,7 +22,15 @@
     "https://v2.shlib.life/*",
     "https://v5.animelib.org/*",
     "https://api.cdnlibs.org/*",
-    "https://mangalib-moderation-default-rtdb.europe-west1.firebasedatabase.app/*"
+    "https://mangalib-moderation-default-rtdb.europe-west1.firebasedatabase.app/*",
+    "https://api.deepseek.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*",
+    "https://dashscope.aliyuncs.com/*",
+    "https://api.x.ai/*",
+    "https://api.mistral.ai/*",
+    "https://raw.githubusercontent.com/*"
   ],
 
   "background": {

@@ -475,7 +475,21 @@ window.MUSettingsUI = (function () {
 
     function renderAiTab() {
         const ai = settings.ai || {};
-        const hasKey = !!ai.deepseekKey;
+        // Миграция: если старый deepseekKey есть, а новый apiKey пустой
+        const currentKey = ai.apiKey || ai.deepseekKey || '';
+        const currentProvider = ai.provider || 'deepseek';
+
+        const providers = {
+            deepseek: { name: 'DeepSeek',         hint: 'platform.deepseek.com/api_keys',        ph: 'sk-...' },
+            openai:   { name: 'ChatGPT (OpenAI)',  hint: 'platform.openai.com/api-keys',           ph: 'sk-...' },
+            gemini:   { name: 'Google Gemini',     hint: 'aistudio.google.com/apikey',             ph: 'AIza...' },
+            claude:   { name: 'Claude (Anthropic)',hint: 'console.anthropic.com/settings/keys',    ph: 'sk-ant-...' },
+            qwen:     { name: 'Qwen (Alibaba)',    hint: 'dashscope.console.aliyun.com',           ph: 'sk-...' },
+            grok:     { name: 'Grok (xAI)',        hint: 'console.x.ai',                          ph: 'xai-...' },
+            mistral:  { name: 'Mistral AI',        hint: 'console.mistral.ai',                    ph: '...' },
+        };
+        const p = providers[currentProvider] || providers.deepseek;
+
         return `
             <div class="mu-setting-row">
                 <div>
@@ -487,20 +501,33 @@ window.MUSettingsUI = (function () {
             <div class="mu-setting-row">
                 <div>
                     <div class="mu-setting-label">Кнопка сканирования страницы</div>
-                    <div class="mu-setting-desc">Показывать кнопку "🔍 Проверить страницу" на страницах с комментариями</div>
+                    <div class="mu-setting-desc">Показывать кнопку "🔍 Проверить страницу"</div>
                 </div>
                 ${renderToggle('ai', 'showScanButton', ai.showScanButton)}
             </div>
 
+            <div class="mu-section-title">Провайдер</div>
+            <div class="mu-setting-row">
+                <div>
+                    <div class="mu-setting-label">AI сервис</div>
+                    <div class="mu-setting-desc">Выберите провайдера и вставьте его API ключ</div>
+                </div>
+                <select class="mu-select" id="mu-ai-provider-select">
+                    ${Object.entries(providers).map(([k, v]) =>
+                        `<option value="${k}" ${k === currentProvider ? 'selected' : ''}>${v.name}</option>`
+                    ).join('')}
+                </select>
+            </div>
+
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
-                <div class="mu-setting-label">DeepSeek API ключ</div>
-                <div class="mu-setting-desc" style="margin-bottom:4px;">
-                    Получить на <a href="https://platform.deepseek.com/api_keys" target="_blank"
-                    style="color:#f39c12;">platform.deepseek.com</a>
+                <div class="mu-setting-label">API ключ</div>
+                <div class="mu-setting-desc" id="mu-ai-hint" style="margin-bottom:4px;">
+                    Получить на <a href="https://${p.hint}" target="_blank" style="color:#f39c12;">${p.hint}</a>
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">
-                    <input type="password" id="mu-ai-key-input" placeholder="sk-..."
-                        value="${ai.deepseekKey || ''}"
+                    <input type="password" id="mu-ai-key-input"
+                        placeholder="${p.ph}"
+                        value="${currentKey}"
                         style="flex:1;padding:6px 10px;background:#1a1a2e;border:1px solid #2a2a3e;
                         border-radius:6px;color:#fff;font-size:11px;outline:none;">
                     <button id="mu-ai-key-save"
@@ -509,13 +536,12 @@ window.MUSettingsUI = (function () {
                         Сохранить
                     </button>
                 </div>
-                ${hasKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Ключ сохранён</div>` : ''}
+                ${currentKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Ключ сохранён</div>` : ''}
             </div>
 
             <div style="margin-top:8px;padding:10px;background:rgba(243,156,18,0.05);
                 border:1px solid rgba(243,156,18,0.15);border-radius:8px;font-size:10px;color:#aaa;line-height:1.6;">
-                🤖 Используется модель <b style="color:#f39c12">deepseek-chat</b><br>
-                Ключ хранится локально в браузере и никуда не отправляется кроме DeepSeek API.
+                🤖 Ключ хранится локально в браузере и отправляется только выбранному провайдеру.
             </div>
         `;
     }
@@ -609,12 +635,24 @@ window.MUSettingsUI = (function () {
             });
         }
 
+        // AI provider select — обновляем подсказку без перерисовки
+        const aiProviderSelect = document.getElementById('mu-ai-provider-select');
+        if (aiProviderSelect) {
+            aiProviderSelect.addEventListener('change', async (e) => {
+                await MU.updateSetting('ai', 'provider', e.target.value);
+                settings = await MU.getSettings();
+                renderTab(activeTab); // перерисовываем чтобы обновить подсказку и placeholder
+            });
+        }
+
         // AI key save
         const aiKeySave = document.getElementById('mu-ai-key-save');
         if (aiKeySave) {
             aiKeySave.addEventListener('click', async () => {
                 const val = document.getElementById('mu-ai-key-input')?.value?.trim() || '';
-                await MU.updateSetting('ai', 'deepseekKey', val);
+                await MU.updateSetting('ai', 'apiKey', val);
+                // Очищаем старый deepseekKey если мигрировали
+                if (settings.ai?.deepseekKey) await MU.updateSetting('ai', 'deepseekKey', '');
                 settings = await MU.getSettings();
                 renderTab(activeTab);
             });

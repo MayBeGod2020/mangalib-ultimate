@@ -1,4 +1,4 @@
-// Модуль AI Verdict — анализ комментария через DeepSeek
+// Модуль AI Verdict — анализ комментария через выбранный AI-провайдер
 window.MUAiVerdict = (function () {
     'use strict';
 
@@ -46,6 +46,167 @@ window.MUAiVerdict = (function () {
 
 Ответ строго в формате JSON (без markdown):
 {"verdict":"нарушает"|"не нарушает"|"спорно","rule":"название правила или пусто","confidence":"высокая"|"средняя"|"низкая","reason":"1-2 предложения объяснения","reason_key":"точное значение из списка выше или пусто"}`;
+
+    // ==================== ПРОВАЙДЕРЫ ====================
+
+    const PROVIDERS = {
+        deepseek: {
+            name:    'DeepSeek',
+            url:     'https://api.deepseek.com/v1/chat/completions',
+            model:   'deepseek-chat',
+            format:  'openai',
+            jsonMode: true,
+            keyHint: 'platform.deepseek.com/api_keys',
+            keyPlaceholder: 'sk-...',
+        },
+        openai: {
+            name:    'ChatGPT (OpenAI)',
+            url:     'https://api.openai.com/v1/chat/completions',
+            model:   'gpt-4o-mini',
+            format:  'openai',
+            jsonMode: true,
+            keyHint: 'platform.openai.com/api-keys',
+            keyPlaceholder: 'sk-...',
+        },
+        gemini: {
+            name:    'Google Gemini',
+            url:     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+            model:   'gemini-2.0-flash',
+            format:  'gemini',
+            jsonMode: false,
+            keyHint: 'aistudio.google.com/apikey',
+            keyPlaceholder: 'AIza...',
+        },
+        claude: {
+            name:    'Claude (Anthropic)',
+            url:     'https://api.anthropic.com/v1/messages',
+            model:   'claude-3-haiku-20240307',
+            format:  'anthropic',
+            jsonMode: false,
+            keyHint: 'console.anthropic.com/settings/keys',
+            keyPlaceholder: 'sk-ant-...',
+        },
+        qwen: {
+            name:    'Qwen (Alibaba)',
+            url:     'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+            model:   'qwen-turbo',
+            format:  'openai',
+            jsonMode: true,
+            keyHint: 'dashscope.console.aliyun.com',
+            keyPlaceholder: 'sk-...',
+        },
+        grok: {
+            name:    'Grok (xAI)',
+            url:     'https://api.x.ai/v1/chat/completions',
+            model:   'grok-beta',
+            format:  'openai',
+            jsonMode: true,
+            keyHint: 'console.x.ai',
+            keyPlaceholder: 'xai-...',
+        },
+        mistral: {
+            name:    'Mistral AI',
+            url:     'https://api.mistral.ai/v1/chat/completions',
+            model:   'mistral-small-latest',
+            format:  'openai',
+            jsonMode: false,
+            keyHint: 'console.mistral.ai',
+            keyPlaceholder: '...',
+        },
+    };
+
+    // Универсальный вызов AI — возвращает текст ответа
+    async function callAI(systemPrompt, userMessage, signal, maxTokens = 300) {
+        const ai       = settings?.ai || {};
+        const apiKey   = ai.apiKey || ai.deepseekKey || ''; // миграция старого ключа
+        const provKey  = ai.provider || 'deepseek';
+        const provider = PROVIDERS[provKey] || PROVIDERS.deepseek;
+
+        if (!apiKey) throw new Error('API ключ не задан');
+
+        // Для провайдеров без jsonMode добавляем напоминание в промпт
+        const sysPrompt = provider.jsonMode
+            ? systemPrompt
+            : systemPrompt + '\n\nВАЖНО: отвечай ТОЛЬКО чистым JSON без markdown-блоков и пояснений.';
+
+        let url, options;
+
+        if (provider.format === 'openai') {
+            url     = provider.url;
+            options = {
+                method:  'POST',
+                signal,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model:       provider.model,
+                    messages:    [{ role: 'system', content: sysPrompt }, { role: 'user', content: userMessage }],
+                    max_tokens:  maxTokens,
+                    temperature: 0.1,
+                    ...(provider.jsonMode ? { response_format: { type: 'json_object' } } : {}),
+                }),
+            };
+
+        } else if (provider.format === 'gemini') {
+            url     = `${provider.url}?key=${apiKey}`;
+            options = {
+                method:  'POST',
+                signal,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: sysPrompt }] },
+                    contents:          [{ role: 'user', parts: [{ text: userMessage }] }],
+                    generationConfig:  { maxOutputTokens: maxTokens, temperature: 0.1 },
+                }),
+            };
+
+        } else if (provider.format === 'anthropic') {
+            url     = provider.url;
+            options = {
+                method:  'POST',
+                signal,
+                headers: {
+                    'Content-Type':      'application/json',
+                    'x-api-key':         apiKey,
+                    'anthropic-version': '2023-06-01',
+                },
+                body: JSON.stringify({
+                    model:      provider.model,
+                    system:     sysPrompt,
+                    messages:   [{ role: 'user', content: userMessage }],
+                    max_tokens: maxTokens,
+                }),
+            };
+        }
+
+        const resp = await fetch(url, options);
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+
+        // Извлекаем текст ответа в зависимости от формата
+        if (provider.format === 'gemini') {
+            return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        } else if (provider.format === 'anthropic') {
+            return data.content?.[0]?.text?.trim() || '';
+        } else {
+            return data.choices?.[0]?.message?.content?.trim() || '';
+        }
+    }
+
+    // Парсим JSON из ответа (с фолбэками)
+    function parseJSON(raw) {
+        try { return JSON.parse(raw); } catch {}
+        try {
+            const clean = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+            return JSON.parse(clean);
+        } catch {}
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) try { return JSON.parse(match[0]); } catch {}
+        throw new Error(`Не удалось разобрать ответ: ${raw.substring(0, 80)}`);
+    }
 
     // ==================== UI ====================
 
@@ -156,95 +317,38 @@ window.MUAiVerdict = (function () {
     // ==================== API ====================
 
     async function analyze(commentText, reason, popup = null, pageContext = null) {
-        const apiKey = settings?.ai?.deepseekKey;
-        if (!apiKey) return;
+        const ai = settings?.ai || {};
+        if (!ai.apiKey && !ai.deepseekKey) return;
 
         showPanel('loading');
 
-        const isClassifyMode = !reason; // нет причины — режим автовыбора
+        const isClassifyMode = !reason;
         const systemPrompt   = isClassifyMode ? CLASSIFY_PROMPT : VERIFY_PROMPT;
 
-        // Формируем контекстный блок если есть данные о странице
         let contextBlock = '';
         if (pageContext?.title && pageContext.title !== '—') {
-            contextBlock += `\nКонтекст страницы:`;
-            contextBlock += `\n- Тайтл: ${pageContext.title}`;
+            contextBlock += `\nКонтекст страницы:\n- Тайтл: ${pageContext.title}`;
             if (pageContext.chapter) contextBlock += `\n- ${pageContext.chapter}`;
             if (pageContext.genres)  contextBlock += `\n- Жанры: ${pageContext.genres}`;
             contextBlock += '\n';
         }
-
         const userMessage = isClassifyMode
             ? `${contextBlock}Текст комментария:\n${commentText}`
             : `${contextBlock}Причина жалобы: ${reason}\n\nТекст комментария:\n${commentText}`;
 
         try {
             const controller = new AbortController();
-            currentRequest = controller;
+            currentRequest   = controller;
 
-            const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                signal: controller.signal,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user',   content: userMessage },
-                    ],
-                    max_tokens: 200,
-                    temperature: 0.1,
-                    response_format: { type: 'json_object' }, // гарантированный JSON без markdown
-                }),
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                const msg = err?.error?.message || `HTTP ${response.status}`;
-                MU.log('AiVerdict', 'API error:', msg, err);
-                throw new Error(msg);
-            }
-
-            const data = await response.json();
-            const raw  = data.choices?.[0]?.message?.content?.trim() || '';
-
-            MU.log('AiVerdict', 'Raw response:', raw);
-
-            // Если пришла ошибка API
-            if (data.error) throw new Error(data.error.message || 'Ошибка API');
-            if (!raw)       throw new Error('Пустой ответ от модели');
-
-            let parsed;
-            try {
-                // 1. Прямой парсинг
-                parsed = JSON.parse(raw);
-            } catch {
-                try {
-                    // 2. Убираем markdown-блоки ```json ... ```
-                    const clean = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
-                    parsed = JSON.parse(clean);
-                } catch {
-                    try {
-                        // 3. Вырезаем первый JSON-объект из текста
-                        const match = raw.match(/\{[\s\S]*\}/);
-                        if (match) parsed = JSON.parse(match[0]);
-                        else throw new Error('JSON не найден');
-                    } catch {
-                        throw new Error(`Ответ: ${raw.substring(0, 100)}`);
-                    }
-                }
-            }
+            const raw    = await callAI(systemPrompt, userMessage, controller.signal, 250);
+            if (!raw)    throw new Error('Пустой ответ от модели');
+            const parsed = parseJSON(raw);
 
             showPanel('result', { ...parsed, _commentText: commentText, _reason: reason, _popup: popup, _pageContext: pageContext });
 
-            // В режиме автовыбора — подставляем причину в дропдаун попапа
             if (isClassifyMode && parsed.reason_key && popup && document.body.contains(popup)) {
                 window.MUModeration?.selectReason(popup, parsed.reason_key);
             }
-
         } catch (err) {
             if (err.name === 'AbortError') return;
             showPanel('error', { message: err.message });
@@ -255,9 +359,9 @@ window.MUAiVerdict = (function () {
 
     // ==================== ИНТЕГРАЦИЯ ====================
 
-    // Вызывается из moderation.js когда открывается попап
     function onPopupOpen(commentText, reason, popup = null, pageContext = null) {
-        if (!settings?.ai?.enabled || !settings?.ai?.deepseekKey) return;
+        const ai = settings?.ai || {};
+        if (!ai.enabled || (!ai.apiKey && !ai.deepseekKey)) return;
         analyze(commentText, reason, popup, pageContext);
     }
 
@@ -348,8 +452,9 @@ window.MUAiVerdict = (function () {
 
     async function batchScanPage() {
         if (batchRunning) return;
-        const apiKey = settings?.ai?.deepseekKey;
-        if (!apiKey || !settings?.ai?.enabled) {
+        const ai     = settings?.ai || {};
+        const apiKey = ai.apiKey || ai.deepseekKey;
+        if (!apiKey || !ai.enabled) {
             alert('Включите ИИ и добавьте API ключ в настройках (⚙️ → 🤖 ИИ)');
             return;
         }
@@ -379,32 +484,10 @@ window.MUAiVerdict = (function () {
             showBatchStatus(`Сканирую ${i + 1}–${Math.min(i + BATCH_SIZE, total)} из ${total}…`, '#f39c12');
 
             try {
-                const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        messages: [
-                            { role: 'system', content: BATCH_PROMPT },
-                            { role: 'user',   content: listed },
-                        ],
-                        max_tokens: 800,
-                        temperature: 0.1,
-                        response_format: { type: 'json_object' },
-                    }),
-                });
-
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-                const data = await resp.json();
-                const raw  = data.choices?.[0]?.message?.content?.trim() || '{}';
-                MU.log('AiVerdict', 'Batch raw:', raw);
+                const raw = await callAI(BATCH_PROMPT, listed, null, 1000).catch(() => '{}');
 
                 let parsed;
-                try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+                try { parsed = parseJSON(raw); } catch { parsed = {}; }
 
                 (parsed.suspicious || []).forEach(item => {
                     const globalIdx = item.id - 1; // id начинается с 1
