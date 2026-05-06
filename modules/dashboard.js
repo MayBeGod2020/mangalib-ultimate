@@ -264,7 +264,7 @@ window.MUDashboard = (function() {
                     <span style="color:#444">пусто</span>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <button class="mu-dash-btn" id="mu-add-watch" style="color:#f39c12">+ Добавить</button>
+                    <button class="mu-dash-btn" id="mu-add-watch" style="color:var(--mu-accent, #f39c12)">+ Добавить</button>
                     <button class="mu-dash-btn" id="mu-announce-btn" style="color:#9b59b6">📢 Объявление</button>
                 </div>
             </div>

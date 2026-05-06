@@ -236,7 +236,7 @@ window.MUAiVerdict = (function () {
                     color:var(--text-secondary,#8a8a8e);">
                     <span style="display:inline-block;width:16px;height:16px;
                         border:2px solid var(--border-base,#e5e5e5);
-                        border-top-color:#f39c12;border-radius:50%;
+                        border-top-color:var(--mu-accent, #f39c12);border-radius:50%;
                         animation:mu-ai-spin 0.8s linear infinite;flex-shrink:0;"></span>
                     <span>ИИ анализирует комментарий…</span>
                     <button onclick="document.getElementById('${PANEL_ID}').remove()"
@@ -575,15 +575,21 @@ window.MUAiVerdict = (function () {
         btn.textContent = '🔍 Проверить страницу';
         btn.style.cssText = `
             position:fixed;bottom:24px;left:24px;z-index:999998;
-            padding:7px 14px;border-radius:20px;border:1px solid #f39c12;
-            background:rgba(243,156,18,0.12);color:#f39c12;
+            padding:7px 14px;border-radius:20px;
+            border:1px solid var(--mu-accent, #f39c12);
+            background:color-mix(in srgb, var(--mu-accent, #f39c12) 12%, transparent);
+            color:var(--mu-accent, #f39c12);
             font-size:12px;font-weight:600;cursor:pointer;
             font-family:var(--reader-font-family,-apple-system,sans-serif);
             box-shadow:0 4px 12px rgba(0,0,0,0.15);
             transition:all 0.2s;
         `;
-        btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(243,156,18,0.25)'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(243,156,18,0.12)'; });
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'color-mix(in srgb, var(--mu-accent, #f39c12) 25%, transparent)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'color-mix(in srgb, var(--mu-accent, #f39c12) 12%, transparent)';
+        });
         btn.addEventListener('click', batchScanPage);
         document.body.appendChild(btn);
     }

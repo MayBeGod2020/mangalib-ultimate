@@ -20,16 +20,16 @@ window.MUSettingsUI = (function () {
         style.textContent = `
             #mu-settings-toggle {
                 background:var(--background-elevated-1,#fff);
-                border:1px solid #f39c12;border-radius:50%;
-                width:32px;height:32px;color:#f39c12;cursor:pointer;
+                border:1px solid var(--mu-accent, #f39c12);border-radius:50%;
+                width:32px;height:32px;color:var(--mu-accent, #f39c12);cursor:pointer;
                 display:flex;align-items:center;justify-content:center;
-                font-size:16px;box-shadow:0 2px 8px rgba(243,156,18,0.25);
+                font-size:16px;box-shadow:0 2px 8px color-mix(in srgb, var(--mu-accent, #f39c12) 25%, transparent);
                 transition:all 0.2s;font-family:var(--reader-font-family,-apple-system,sans-serif);
                 padding:0;
             }
             #mu-settings-toggle:hover {
                 transform:rotate(45deg);
-                background:rgba(243,156,18,0.1);
+                background:color-mix(in srgb, var(--mu-accent, #f39c12) 10%, transparent);
             }
             #mu-settings-panel {
                 display:none;
@@ -52,7 +52,7 @@ window.MUSettingsUI = (function () {
                 display:flex;justify-content:space-between;align-items:center;
             }
             .mu-settings-title {
-                color:#f39c12;font-weight:700;font-size:14px;
+                color:var(--mu-accent, #f39c12);font-weight:700;font-size:14px;
             }
             .mu-settings-close {
                 background:none;border:none;
@@ -81,7 +81,7 @@ window.MUSettingsUI = (function () {
             }
             .mu-settings-tab:hover { color:var(--text-primary,#212529); }
             .mu-settings-tab.active {
-                color:#f39c12;border-bottom-color:#f39c12;
+                color:var(--mu-accent, #f39c12);border-bottom-color:var(--mu-accent, #f39c12);
                 font-weight:600;
             }
 
@@ -126,8 +126,8 @@ window.MUSettingsUI = (function () {
             }
             .mu-toggle-slider::before { content:'ВЫКЛ'; }
             .mu-toggle input:checked + .mu-toggle-slider {
-                background:rgba(243,156,18,0.12);
-                border-color:#f39c12;color:#f39c12;
+                background:color-mix(in srgb, var(--mu-accent, #f39c12) 12%, transparent);
+                border-color:var(--mu-accent, #f39c12);color:var(--mu-accent, #f39c12);
             }
             .mu-toggle input:checked + .mu-toggle-slider::before { content:'ВКЛ'; }
 
@@ -141,7 +141,7 @@ window.MUSettingsUI = (function () {
                 font-size:12px;cursor:pointer;min-width:110px;
                 font-family:inherit;
             }
-            .mu-select:focus { outline:none;border-color:#f39c12; }
+            .mu-select:focus { outline:none;border-color:var(--mu-accent, #f39c12); }
 
             /* Input */
             .mu-input {
@@ -153,13 +153,13 @@ window.MUSettingsUI = (function () {
                 font-size:12px;width:100%;box-sizing:border-box;
                 font-family:inherit;
             }
-            .mu-input:focus { outline:none;border-color:#f39c12; }
+            .mu-input:focus { outline:none;border-color:var(--mu-accent, #f39c12); }
             .mu-input[type="color"] { width:32px;height:28px;padding:2px;cursor:pointer; }
             .mu-input[type="range"] { cursor:pointer; }
 
             /* Section title */
             .mu-section-title {
-                color:#f39c12;font-size:10px;text-transform:uppercase;
+                color:var(--mu-accent, #f39c12);font-size:10px;text-transform:uppercase;
                 letter-spacing:0.8px;font-weight:700;
                 margin-top:16px;margin-bottom:4px;
             }
@@ -168,13 +168,13 @@ window.MUSettingsUI = (function () {
             /* Buttons */
             .mu-btn {
                 background:var(--background-fill-4,rgba(116,116,128,.05));
-                border:1px solid #f39c12;color:#f39c12;
+                border:1px solid var(--mu-accent, #f39c12);color:var(--mu-accent, #f39c12);
                 padding:6px 14px;
                 border-radius:var(--radius-section-block,8px);
                 cursor:pointer;font-size:12px;font-family:inherit;
                 transition:background 0.15s;
             }
-            .mu-btn:hover { background:rgba(243,156,18,0.1); }
+            .mu-btn:hover { background:color-mix(in srgb, var(--mu-accent, #f39c12) 10%, transparent); }
             .mu-btn-danger { border-color:var(--red,#f44336);color:var(--red,#f44336); }
             .mu-btn-danger:hover { background:rgba(244,67,54,0.08); }
 
@@ -567,7 +567,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
                 <div class="mu-setting-label">API ключ</div>
                 <div class="mu-setting-desc" id="mu-ai-hint" style="margin-bottom:4px;">
-                    Получить на <a href="https://${p.hint}" target="_blank" style="color:#f39c12;">${p.hint}</a>
+                    Получить на <a href="https://${p.hint}" target="_blank" style="color:var(--mu-accent, #f39c12);">${p.hint}</a>
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">
                     <input type="password" id="mu-ai-key-input" class="mu-input"

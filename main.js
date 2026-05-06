@@ -29,6 +29,9 @@
     async function init() {
         MU.log('Main', 'Запуск Mangalib Ultimate Helper');
 
+        // Определяем акцентный цвет сайта и выставляем --mu-accent
+        MU.detectAccentColor();
+
         // Запускаем модули в правильном порядке
         // 1. Персонализация — самая первая, чтобы стили применились сразу
         await window.MUPersonalization.init();
@@ -86,7 +89,7 @@
             position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
             z-index:9999999;
             background:var(--background-elevated-1,#fff);
-            border:1px solid #f39c12;
+            border:1px solid var(--mu-accent, #f39c12);
             border-radius:var(--radius-section-block,10px);
             padding:10px 16px;
             font-family:var(--reader-font-family,-apple-system,sans-serif);font-size:13px;
@@ -96,10 +99,10 @@
             animation:mu-ai-slide-in 0.3s ease;
         `;
         banner.innerHTML = `
-            <span>🔄 Доступна новая версия <b style="color:#f39c12">v${updateVersion}</b> (у вас v${current})</span>
+            <span>🔄 Доступна новая версия <b style="color:var(--mu-accent,#f39c12)">v${updateVersion}</b> (у вас v${current})</span>
             <a href="https://github.com/MayBeGod2020/mangalib-ultimate/archive/refs/heads/main.zip"
                target="_blank"
-               style="padding:5px 12px;background:#f39c12;color:#000;border-radius:6px;
+               style="padding:5px 12px;background:var(--mu-accent,#f39c12);color:#000;border-radius:6px;
                       font-weight:700;font-size:12px;text-decoration:none;white-space:nowrap;">
                ⬇️ Скачать
             </a>
