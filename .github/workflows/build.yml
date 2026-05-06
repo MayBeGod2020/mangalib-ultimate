@@ -25,54 +25,23 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version $VERSION"
 
-      # ── Chrome ──────────────────────────────────────────────
-      - name: Build Chrome zip
+      - name: Build zip (один файл для Chrome и Firefox)
         run: |
           mkdir -p dist
-          zip -r dist/mangalib-ultimate-chrome-v${{ steps.ver.outputs.version }}.zip . \
+          zip -r dist/mangalib-ultimate-v${{ steps.ver.outputs.version }}.zip . \
             --exclude "*.git*" \
             --exclude ".github/*" \
             --exclude "dist/*" \
             --exclude "*.md" \
-            --exclude "build.ps1" \
             --exclude "*.zip"
 
-      # ── Firefox ─────────────────────────────────────────────
-      - name: Build Firefox zip
-        run: |
-          # Копируем в temp и добавляем gecko-поле в manifest
-          cp -r . /tmp/ff
-          python3 - <<'PY'
-          import json, os
-          path = '/tmp/ff/manifest.json'
-          m = json.load(open(path))
-          m['browser_specific_settings'] = {
-              'gecko': {
-                  'id': 'mangalib-ultimate@maybegod2020',
-                  'strict_min_version': '128.0'
-              }
-          }
-          json.dump(m, open(path, 'w'), indent=2, ensure_ascii=False)
-          PY
-
-          cd /tmp/ff
-          zip -r $GITHUB_WORKSPACE/dist/mangalib-ultimate-firefox-v${{ steps.ver.outputs.version }}.zip . \
-            --exclude "*.git*" \
-            --exclude ".github/*" \
-            --exclude "dist/*" \
-            --exclude "*.md" \
-            --exclude "build.ps1" \
-            --exclude "*.zip"
-
-      # ── Artifacts (всегда, даже без тега) ───────────────────
-      - name: Upload build artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: extension-v${{ steps.ver.outputs.version }}
+          name: mangalib-ultimate-v${{ steps.ver.outputs.version }}
           path: dist/
           retention-days: 30
 
-      # ── GitHub Release (только при создании тега v*) ────────
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -81,17 +50,14 @@ jobs:
           body: |
             ## Mangalib Ultimate Helper v${{ steps.ver.outputs.version }}
 
-            ### Установка
-            **Chrome / Chromium / Edge:**
-            1. Скачай `mangalib-ultimate-chrome-*.zip`
-            2. Распакуй в любую папку
-            3. Открой `chrome://extensions` → включи «Режим разработчика» → «Загрузить распакованное»
+            ### Установка Chrome / Edge
+            1. Скачай zip → распакуй в папку
+            2. `chrome://extensions` → Режим разработчика → Загрузить распакованное
 
-            **Firefox:**
-            1. Скачай `mangalib-ultimate-firefox-*.zip`
-            2. Открой `about:debugging` → «Этот Firefox» → «Загрузить временное дополнение» → выбери zip
+            ### Установка Firefox
+            1. Скачай zip
+            2. `about:debugging` → Этот Firefox → Загрузить временное дополнение → выбери zip
 
-            ### Что нового
-            _См. коммиты с момента предыдущего тега._
+            _Или установи через [Chrome Web Store](https://chrome.google.com/webstore) / [Firefox Add-ons](https://addons.mozilla.org)_
           files: dist/*
           generate_release_notes: false

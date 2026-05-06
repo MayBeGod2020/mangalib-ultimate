@@ -4,6 +4,13 @@
   "version": "3.7",
   "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
 
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "mangalib-ultimate@maybegod2020",
+      "strict_min_version": "128.0"
+    }
+  },
+
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
