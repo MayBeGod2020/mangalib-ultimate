@@ -39,13 +39,13 @@ window.MUUserTooltip = (function () {
                 position: fixed;
                 z-index: 999999;
                 width: 240px;
-                background: #0f0f1a;
-                border: 1px solid #2a2a3e;
-                border-radius: 10px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.7);
-                font-family: -apple-system, sans-serif;
+                background: var(--background-elevated-1,#fff);
+                border: 1px solid var(--border-base,#e5e5e5);
+                border-radius: var(--radius-section-block,10px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+                font-family: var(--reader-font-family,-apple-system,sans-serif);
                 font-size: 12px;
-                color: #ccc;
+                color: var(--text-primary,#212529);
                 pointer-events: none;
                 animation: mu-tooltip-in 0.15s ease;
                 overflow: hidden;
@@ -59,8 +59,8 @@ window.MUUserTooltip = (function () {
                 align-items: center;
                 gap: 10px;
                 padding: 10px 12px;
-                background: #12122a;
-                border-bottom: 1px solid #1e1e2e;
+                background: var(--background-elevated-2,#f7f7f8);
+                border-bottom: 1px solid var(--border-base,#e5e5e5);
             }
             .mu-tt-avatar {
                 width: 36px;
@@ -68,11 +68,11 @@ window.MUUserTooltip = (function () {
                 border-radius: 50%;
                 object-fit: cover;
                 flex-shrink: 0;
-                background: #1a1a2e;
+                background: var(--background-fill-2,rgba(116,116,128,.08));
             }
             .mu-tt-username {
                 font-weight: 700;
-                color: #fff;
+                color: var(--text-primary,#212529);
                 font-size: 13px;
                 white-space: nowrap;
                 overflow: hidden;
@@ -89,15 +89,15 @@ window.MUUserTooltip = (function () {
                 align-items: center;
                 gap: 6px;
                 font-size: 11px;
-                color: #aaa;
+                color: var(--text-secondary,#8a8a8e);
             }
-            .mu-tt-row b { color: #ddd; }
+            .mu-tt-row b { color: var(--text-primary,#212529); }
             .mu-tt-banned {
                 margin: 0 12px 10px;
                 padding: 6px 10px;
-                background: rgba(231,76,60,0.12);
-                border: 1px solid rgba(231,76,60,0.4);
-                border-radius: 6px;
+                background: rgba(231,76,60,0.08);
+                border: 1px solid rgba(231,76,60,0.35);
+                border-radius: var(--radius-section-block,6px);
                 font-size: 11px;
                 color: #e74c3c;
             }
@@ -124,11 +124,12 @@ window.MUUserTooltip = (function () {
         tip.id = TOOLTIP_ID;
         tip.innerHTML = `
             <div class="mu-tt-header">
-                <div class="mu-tt-avatar" style="background:#1a1a2e;display:flex;align-items:center;justify-content:center;color:#333;font-size:18px;">👤</div>
+                <div class="mu-tt-avatar" style="display:flex;align-items:center;justify-content:center;
+                    color:var(--text-secondary,#8a8a8e);font-size:18px;">👤</div>
                 <div class="mu-tt-username">${username}</div>
             </div>
             <div class="mu-tt-body">
-                <div class="mu-tt-row" style="color:#555;">Загружаю…</div>
+                <div class="mu-tt-row">Загружаю…</div>
             </div>
         `;
         document.body.appendChild(tip);

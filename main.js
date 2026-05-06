@@ -84,11 +84,15 @@
         banner.id = 'mu-update-banner';
         banner.style.cssText = `
             position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
-            z-index:9999999;background:#1a1a0a;border:1px solid #f39c12;
-            border-radius:10px;padding:10px 16px;
-            font-family:-apple-system,sans-serif;font-size:13px;
+            z-index:9999999;
+            background:var(--background-elevated-1,#fff);
+            border:1px solid #f39c12;
+            border-radius:var(--radius-section-block,10px);
+            padding:10px 16px;
+            font-family:var(--reader-font-family,-apple-system,sans-serif);font-size:13px;
+            color:var(--text-primary,#212529);
             display:flex;align-items:center;gap:12px;
-            box-shadow:0 4px 20px rgba(0,0,0,0.6);
+            box-shadow:0 4px 20px rgba(0,0,0,0.15);
             animation:mu-ai-slide-in 0.3s ease;
         `;
         banner.innerHTML = `
@@ -100,7 +104,8 @@
                ⬇️ Скачать
             </a>
             <button onclick="this.closest('#mu-update-banner').remove()"
-                style="background:none;border:none;color:#666;cursor:pointer;font-size:18px;padding:0;line-height:1;">✕</button>
+                style="background:none;border:none;color:var(--text-secondary,#8a8a8e);
+                cursor:pointer;font-size:18px;padding:0;line-height:1;">✕</button>
         `;
         document.body.appendChild(banner);
     }

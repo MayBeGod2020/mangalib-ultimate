@@ -221,56 +221,65 @@ window.MUAiVerdict = (function () {
         panel.id = PANEL_ID;
         panel.style.cssText = `
             position:fixed;bottom:24px;right:24px;z-index:999999;
-            width:300px;background:#0f0f1a;border-radius:12px;
-            box-shadow:0 8px 32px rgba(0,0,0,0.7);
-            font-family:-apple-system,sans-serif;font-size:12px;
-            border:1px solid #2a2a3e;overflow:hidden;
+            width:300px;
+            background:var(--background-elevated-1,#fff);
+            border-radius:var(--radius-section-block,10px);
+            box-shadow:0 8px 32px rgba(0,0,0,0.18);
+            font-family:var(--reader-font-family,-apple-system,sans-serif);font-size:12px;
+            border:1px solid var(--border-base,#e5e5e5);overflow:hidden;
             animation:mu-ai-slide-in 0.25s ease;
         `;
 
         if (state === 'loading') {
-            panel.style.borderColor = '#2a2a3e';
             panel.innerHTML = `
-                <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;color:#aaa;">
-                    <span style="display:inline-block;width:16px;height:16px;border:2px solid #444;
-                        border-top-color:#f39c12;border-radius:50%;animation:mu-ai-spin 0.8s linear infinite;"></span>
+                <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;
+                    color:var(--text-secondary,#8a8a8e);">
+                    <span style="display:inline-block;width:16px;height:16px;
+                        border:2px solid var(--border-base,#e5e5e5);
+                        border-top-color:#f39c12;border-radius:50%;
+                        animation:mu-ai-spin 0.8s linear infinite;flex-shrink:0;"></span>
                     <span>ИИ анализирует комментарий…</span>
                     <button onclick="document.getElementById('${PANEL_ID}').remove()"
-                        style="margin-left:auto;background:none;border:none;color:#555;cursor:pointer;font-size:16px;padding:0;">✕</button>
+                        style="margin-left:auto;background:none;border:none;
+                        color:var(--text-secondary,#8a8a8e);cursor:pointer;font-size:16px;padding:0;">✕</button>
                 </div>
             `;
         } else if (state === 'result') {
             const colors = {
-                'нарушает':     { bg: '#1a0a0a', border: '#e74c3c', badge: '#e74c3c', icon: '🚫' },
-                'не нарушает':  { bg: '#0a1a0a', border: '#2ecc71', badge: '#2ecc71', icon: '✅' },
-                'спорно':       { bg: '#1a140a', border: '#f39c12', badge: '#f39c12', icon: '⚠️' },
+                'нарушает':    { bg: 'rgba(231,76,60,0.06)',  border: '#e74c3c', icon: '🚫' },
+                'не нарушает': { bg: 'rgba(46,204,113,0.06)', border: '#2ecc71', icon: '✅' },
+                'спорно':      { bg: 'rgba(243,156,18,0.06)', border: '#f39c12', icon: '⚠️' },
             };
             const c = colors[data.verdict] || colors['спорно'];
             const confColor = { 'высокая': '#2ecc71', 'средняя': '#f39c12', 'низкая': '#e74c3c' };
 
-            panel.style.background   = c.bg;
-            panel.style.borderColor  = c.border;
+            panel.style.background  = `var(--background-elevated-1,#fff)`;
+            panel.style.borderColor = c.border;
             panel.innerHTML = `
-                <div style="padding:10px 14px;border-bottom:1px solid ${c.border}22;
-                    display:flex;align-items:center;gap:8px;">
+                <div style="padding:10px 14px;border-bottom:1px solid ${c.border}33;
+                    background:${c.bg};display:flex;align-items:center;gap:8px;">
                     <span style="font-size:16px;">${c.icon}</span>
                     <span style="font-weight:700;color:${c.border};font-size:13px;">
                         ${data.verdict.charAt(0).toUpperCase() + data.verdict.slice(1)}
                     </span>
-                    ${data.rule ? `<span style="margin-left:4px;color:#aaa;font-size:11px;">· ${data.rule}</span>` : ''}
+                    ${data.rule ? `<span style="margin-left:4px;color:var(--text-secondary,#8a8a8e);font-size:11px;">· ${data.rule}</span>` : ''}
                     <button onclick="document.getElementById('${PANEL_ID}').remove()"
-                        style="margin-left:auto;background:none;border:none;color:#555;cursor:pointer;font-size:16px;padding:0;line-height:1;">✕</button>
+                        style="margin-left:auto;background:none;border:none;
+                        color:var(--text-secondary,#8a8a8e);cursor:pointer;font-size:16px;padding:0;line-height:1;">✕</button>
                 </div>
                 <div style="padding:10px 14px;">
-                    <div style="color:#ccc;line-height:1.5;margin-bottom:8px;">${data.reason || ''}</div>
-                    <div style="color:${confColor[data.confidence] || '#aaa'};font-size:10px;opacity:0.8;">
+                    <div style="color:var(--text-primary,#212529);line-height:1.5;margin-bottom:8px;">${data.reason || ''}</div>
+                    <div style="color:${confColor[data.confidence] || 'var(--text-secondary,#8a8a8e)'};font-size:10px;opacity:0.8;">
                         Уверенность: ${data.confidence || '—'}
                     </div>
                 </div>
                 <div style="padding:0 14px 10px;display:flex;gap:6px;">
                     <button id="mu-ai-rerun"
-                        style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid #2a2a3e;
-                        background:transparent;color:#aaa;cursor:pointer;font-size:10px;">
+                        style="flex:1;padding:4px 8px;border-radius:6px;
+                        border:1px solid var(--border-base,#e5e5e5);
+                        background:transparent;
+                        color:var(--text-secondary,#8a8a8e);
+                        cursor:pointer;font-size:10px;font-family:inherit;">
                         🔄 Перепроверить
                     </button>
                 </div>
@@ -282,7 +291,8 @@ window.MUAiVerdict = (function () {
                     <span>⚠️</span>
                     <span style="flex:1;">${data.message || 'Ошибка запроса к ИИ'}</span>
                     <button onclick="document.getElementById('${PANEL_ID}').remove()"
-                        style="background:none;border:none;color:#555;cursor:pointer;font-size:16px;padding:0;">✕</button>
+                        style="background:none;border:none;
+                        color:var(--text-secondary,#8a8a8e);cursor:pointer;font-size:16px;padding:0;">✕</button>
                 </div>
             `;
         }
@@ -523,9 +533,12 @@ window.MUAiVerdict = (function () {
             el.id = SCAN_STATUS_ID;
             el.style.cssText = `
                 position:fixed;bottom:68px;left:24px;z-index:999998;
-                padding:8px 14px;border-radius:8px;font-size:12px;
-                font-family:-apple-system,sans-serif;font-weight:600;
-                box-shadow:0 4px 12px rgba(0,0,0,0.5);
+                padding:8px 14px;
+                border-radius:var(--radius-section-block,8px);
+                font-size:12px;
+                font-family:var(--reader-font-family,-apple-system,sans-serif);
+                font-weight:600;
+                box-shadow:0 4px 12px rgba(0,0,0,0.15);
                 transition:all 0.3s;
             `;
             document.body.appendChild(el);
@@ -565,8 +578,8 @@ window.MUAiVerdict = (function () {
             padding:7px 14px;border-radius:20px;border:1px solid #f39c12;
             background:rgba(243,156,18,0.12);color:#f39c12;
             font-size:12px;font-weight:600;cursor:pointer;
-            font-family:-apple-system,sans-serif;
-            box-shadow:0 4px 12px rgba(0,0,0,0.4);
+            font-family:var(--reader-font-family,-apple-system,sans-serif);
+            box-shadow:0 4px 12px rgba(0,0,0,0.15);
             transition:all 0.2s;
         `;
         btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(243,156,18,0.25)'; });

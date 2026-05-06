@@ -19,129 +19,174 @@ window.MUSettingsUI = (function () {
         style.id = 'mu-settings-styles';
         style.textContent = `
             #mu-settings-toggle {
-                background:#1a1a2e;border:1px solid #f39c12;border-radius:50%;
+                background:var(--background-elevated-1,#fff);
+                border:1px solid #f39c12;border-radius:50%;
                 width:32px;height:32px;color:#f39c12;cursor:pointer;
                 display:flex;align-items:center;justify-content:center;
-                font-size:16px;box-shadow:0 2px 8px rgba(243,156,18,0.3);
-                transition:all 0.2s;font-family:-apple-system,sans-serif;
+                font-size:16px;box-shadow:0 2px 8px rgba(243,156,18,0.25);
+                transition:all 0.2s;font-family:var(--reader-font-family,-apple-system,sans-serif);
                 padding:0;
             }
             #mu-settings-toggle:hover {
-                transform: rotate(45deg);
-                background: rgba(243,156,18,0.15);
+                transform:rotate(45deg);
+                background:rgba(243,156,18,0.1);
             }
             #mu-settings-panel {
                 display:none;
-                position:fixed;top:50px;right:16px;width:380px;
-                max-height:80vh;background:#0f0f1a;border:1px solid #2a2a3e;
-                border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.6);
-                overflow:hidden;z-index:99998;font-family:-apple-system,sans-serif;
-                font-size:12px;flex-direction:column;
+                position:fixed;top:50px;right:16px;width:390px;
+                max-height:82vh;
+                background:var(--background-elevated-1,#fff);
+                border:1px solid var(--border-base,#e5e5e5);
+                border-radius:var(--radius-section-block,8px);
+                box-shadow:0 8px 32px rgba(0,0,0,0.15);
+                overflow:hidden;z-index:99998;
+                font-family:var(--reader-font-family,-apple-system,sans-serif);
+                font-size:13px;flex-direction:column;
             }
             #mu-settings-panel.open { display:flex !important; }
+
             .mu-settings-header {
-                padding:12px 16px;background:#12122a;border-bottom:1px solid #1e1e2e;
+                padding:12px 16px;
+                background:var(--background-elevated-2,#fff);
+                border-bottom:1px solid var(--border-base,#e5e5e5);
                 display:flex;justify-content:space-between;align-items:center;
             }
-            .mu-settings-title { color:#f39c12;font-weight:700;font-size:14px; }
-            .mu-settings-close {
-                background:none;border:none;color:#666;cursor:pointer;
-                font-size:18px;padding:0;width:24px;height:24px;
+            .mu-settings-title {
+                color:#f39c12;font-weight:700;font-size:14px;
             }
-            .mu-settings-close:hover { color:#fff; }
+            .mu-settings-close {
+                background:none;border:none;
+                color:var(--text-secondary,#8a8a8e);
+                cursor:pointer;font-size:18px;padding:0;width:24px;height:24px;
+                display:flex;align-items:center;justify-content:center;
+                border-radius:50%;transition:background 0.15s;
+            }
+            .mu-settings-close:hover {
+                background:var(--background-fill-3,rgba(118,118,128,.12));
+                color:var(--text-primary,#212529);
+            }
+
             .mu-settings-tabs {
-                display:flex;background:#0a0a1a;border-bottom:1px solid #1e1e2e;
+                display:flex;
+                background:var(--background-elevated-2,#fff);
+                border-bottom:1px solid var(--border-base,#e5e5e5);
                 overflow-x:hidden;
             }
             .mu-settings-tab {
-                flex:1;padding:8px 4px;background:none;border:none;color:#666;
+                flex:1;padding:9px 4px;background:none;border:none;
+                color:var(--text-secondary,#8a8a8e);
                 cursor:pointer;font-size:10px;border-bottom:2px solid transparent;
                 white-space:nowrap;transition:color 0.15s;text-align:center;
+                font-family:inherit;
             }
-            .mu-settings-tab:hover { color:#aaa; }
-            .mu-settings-tab.active { color:#f39c12;border-bottom-color:#f39c12; }
+            .mu-settings-tab:hover { color:var(--text-primary,#212529); }
+            .mu-settings-tab.active {
+                color:#f39c12;border-bottom-color:#f39c12;
+                font-weight:600;
+            }
+
             .mu-settings-content {
                 flex:1;overflow-y:auto;padding:14px 16px;
+                background:var(--background-elevated-1,#fff);
             }
             .mu-settings-content::-webkit-scrollbar { width:4px; }
-            .mu-settings-content::-webkit-scrollbar-track { background:#0f0f1a; }
-            .mu-settings-content::-webkit-scrollbar-thumb { background:#333;border-radius:2px; }
+            .mu-settings-content::-webkit-scrollbar-track {
+                background:var(--background,#f2f2f3);
+            }
+            .mu-settings-content::-webkit-scrollbar-thumb {
+                background:var(--scrollbar-thumb,#c1c1c1);border-radius:2px;
+            }
 
             .mu-setting-row {
                 display:flex;justify-content:space-between;align-items:center;
-                padding:8px 0;border-bottom:1px solid #1a1a2e;
+                padding:9px 0;
+                border-bottom:1px solid var(--border-light,#e9e9e9);
             }
             .mu-setting-row:last-child { border-bottom:none; }
             .mu-setting-label {
-                color:#ccc;font-size:12px;flex:1;padding-right:10px;
+                color:var(--text-primary,#212529);font-size:13px;
+                flex:1;padding-right:12px;font-weight:500;
             }
             .mu-setting-desc {
-                color:#555;font-size:10px;margin-top:2px;
+                color:var(--text-secondary,#8a8a8e);font-size:11px;margin-top:2px;
+                font-weight:400;
             }
 
-            /* Toggle button */
-            .mu-toggle {
-                position:relative;flex-shrink:0;cursor:pointer;
-            }
+            /* Toggle */
+            .mu-toggle { position:relative;flex-shrink:0;cursor:pointer; }
             .mu-toggle input { display:none; }
             .mu-toggle-slider {
                 display:inline-flex;align-items:center;justify-content:center;
-                padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;
+                padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;
                 letter-spacing:0.3px;transition:all 0.2s;user-select:none;
-                border:1px solid #2a2a3e;background:#1a1a2e;color:#555;
-                min-width:60px;
+                border:1px solid var(--border-base,#e5e5e5);
+                background:var(--background-fill-4,rgba(116,116,128,.05));
+                color:var(--text-secondary,#8a8a8e);
+                min-width:56px;
             }
-            .mu-toggle-slider::before { content: 'ВЫКЛ'; }
+            .mu-toggle-slider::before { content:'ВЫКЛ'; }
             .mu-toggle input:checked + .mu-toggle-slider {
-                background:rgba(243,156,18,0.15);border-color:#f39c12;color:#f39c12;
+                background:rgba(243,156,18,0.12);
+                border-color:#f39c12;color:#f39c12;
             }
-            .mu-toggle input:checked + .mu-toggle-slider::before { content: 'ВКЛ'; }
+            .mu-toggle input:checked + .mu-toggle-slider::before { content:'ВКЛ'; }
 
             /* Select */
             .mu-select {
-                background:#1a1a2e;border:1px solid #2a2a3e;color:#ccc;
-                padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;
-                min-width:100px;
+                background:var(--input-bg,#fff);
+                border:1px solid var(--input-border,#dcdee2);
+                color:var(--text-primary,#212529);
+                padding:5px 8px;
+                border-radius:var(--radius-section-block,8px);
+                font-size:12px;cursor:pointer;min-width:110px;
+                font-family:inherit;
             }
+            .mu-select:focus { outline:none;border-color:#f39c12; }
 
             /* Input */
             .mu-input {
-                background:#1a1a2e;border:1px solid #2a2a3e;color:#ccc;
-                padding:4px 8px;border-radius:4px;font-size:11px;
-                width:100%;box-sizing:border-box;
+                background:var(--input-bg,#fff);
+                border:1px solid var(--input-border,#dcdee2);
+                color:var(--text-primary,#212529);
+                padding:5px 9px;
+                border-radius:var(--radius-section-block,8px);
+                font-size:12px;width:100%;box-sizing:border-box;
+                font-family:inherit;
             }
-            .mu-input[type="color"] {
-                width:32px;height:24px;padding:2px;cursor:pointer;
-            }
-            .mu-input[type="range"] {
-                cursor:pointer;
-            }
+            .mu-input:focus { outline:none;border-color:#f39c12; }
+            .mu-input[type="color"] { width:32px;height:28px;padding:2px;cursor:pointer; }
+            .mu-input[type="range"] { cursor:pointer; }
 
             /* Section title */
             .mu-section-title {
-                color:#f39c12;font-size:11px;text-transform:uppercase;
-                letter-spacing:0.5px;font-weight:600;margin-top:14px;margin-bottom:6px;
+                color:#f39c12;font-size:10px;text-transform:uppercase;
+                letter-spacing:0.8px;font-weight:700;
+                margin-top:16px;margin-bottom:4px;
             }
             .mu-section-title:first-child { margin-top:0; }
 
             /* Buttons */
             .mu-btn {
-                background:#1a1a2e;border:1px solid #f39c12;color:#f39c12;
-                padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;
-                font-family:inherit;
+                background:var(--background-fill-4,rgba(116,116,128,.05));
+                border:1px solid #f39c12;color:#f39c12;
+                padding:6px 14px;
+                border-radius:var(--radius-section-block,8px);
+                cursor:pointer;font-size:12px;font-family:inherit;
+                transition:background 0.15s;
             }
             .mu-btn:hover { background:rgba(243,156,18,0.1); }
-            .mu-btn-danger {
-                border-color:#e74c3c;color:#e74c3c;
-            }
-            .mu-btn-danger:hover { background:rgba(231,76,60,0.1); }
+            .mu-btn-danger { border-color:var(--red,#f44336);color:var(--red,#f44336); }
+            .mu-btn-danger:hover { background:rgba(244,67,54,0.08); }
 
             /* Wallpaper preview */
             .mu-wallpaper-preview {
-                width:100%;height:80px;background:#1a1a2e;border:1px dashed #2a2a3e;
-                border-radius:6px;margin-top:6px;background-size:cover;
-                background-position:center;display:flex;align-items:center;
-                justify-content:center;color:#555;font-size:10px;
+                width:100%;height:80px;
+                background:var(--background,#f2f2f3);
+                border:1px dashed var(--border-base,#e5e5e5);
+                border-radius:var(--radius-section-block,8px);
+                margin-top:6px;background-size:cover;background-position:center;
+                display:flex;align-items:center;justify-content:center;
+                color:var(--text-secondary,#8a8a8e);font-size:11px;
             }
         `;
         document.head.appendChild(style);
@@ -525,22 +570,23 @@ window.MUSettingsUI = (function () {
                     Получить на <a href="https://${p.hint}" target="_blank" style="color:#f39c12;">${p.hint}</a>
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">
-                    <input type="password" id="mu-ai-key-input"
+                    <input type="password" id="mu-ai-key-input" class="mu-input"
                         placeholder="${p.ph}"
                         value="${currentKey}"
-                        style="flex:1;padding:6px 10px;background:#1a1a2e;border:1px solid #2a2a3e;
-                        border-radius:6px;color:#fff;font-size:11px;outline:none;">
-                    <button id="mu-ai-key-save"
-                        style="padding:6px 12px;border-radius:6px;border:1px solid #f39c12;
-                        background:rgba(243,156,18,0.1);color:#f39c12;cursor:pointer;font-size:11px;">
+                        style="flex:1;font-size:11px;">
+                    <button id="mu-ai-key-save" class="mu-btn"
+                        style="padding:6px 12px;font-size:11px;white-space:nowrap;">
                         Сохранить
                     </button>
                 </div>
                 ${currentKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Ключ сохранён</div>` : ''}
             </div>
 
-            <div style="margin-top:8px;padding:10px;background:rgba(243,156,18,0.05);
-                border:1px solid rgba(243,156,18,0.15);border-radius:8px;font-size:10px;color:#aaa;line-height:1.6;">
+            <div style="margin-top:8px;padding:10px;
+                background:var(--background-fill-4,rgba(116,116,128,.05));
+                border:1px solid var(--border-base,#e5e5e5);
+                border-radius:var(--radius-section-block,8px);
+                font-size:10px;color:var(--text-secondary,#8a8a8e);line-height:1.6;">
                 🤖 Ключ хранится локально в браузере и отправляется только выбранному провайдеру.
             </div>
         `;
