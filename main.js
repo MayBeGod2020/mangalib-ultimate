@@ -29,6 +29,13 @@
     async function init() {
         MU.log('Main', 'Запуск Mangalib Ultimate Helper');
 
+        // Проверяем роль пользователя — только модераторы/админы видят расширение
+        const isMod = await MU.checkIsModerator();
+        if (!isMod) {
+            MU.log('Main', 'Нет прав модератора — расширение не загружается');
+            return;
+        }
+
         // Определяем акцентный цвет сайта и выставляем --mu-accent
         MU.detectAccentColor();
 
