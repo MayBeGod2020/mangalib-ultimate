@@ -1,10 +1,12 @@
-# Сборка zip-пакета расширения для Chrome Web Store и Firefox AMO
-# Запуск: правой кнопкой -> "Выполнить с помощью PowerShell"
+# Build script for Chrome Web Store and Firefox AMO
+# Run: right-click -> "Run with PowerShell"
 
-$version = (Get-Content manifest.json | ConvertFrom-Json).version
-$outFile  = "$PSScriptRoot\..\mangalib-ultimate-v$version.zip"
+Add-Type -Assembly System.IO.Compression.FileSystem
 
-# Файлы и папки которые входят в пакет
+$root    = $PSScriptRoot
+$version = (Get-Content "$root\manifest.json" | ConvertFrom-Json).version
+$outFile = "$root\..\mangalib-ultimate-v$version.zip"
+
 $include = @(
     'manifest.json',
     'background.js',
@@ -17,22 +19,32 @@ $include = @(
 
 if (Test-Path $outFile) { Remove-Item $outFile }
 
-$tmp = "$env:TEMP\mu-build"
-if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
-New-Item -ItemType Directory -Path $tmp | Out-Null
+# Use .NET ZipArchive directly to ensure forward slashes (required by AMO / Web Store)
+$zip = [System.IO.Compression.ZipFile]::Open($outFile, 'Create')
 
 foreach ($item in $include) {
-    $src = Join-Path $PSScriptRoot $item
-    if (Test-Path $src) {
-        Copy-Item $src $tmp -Recurse -Force
+    $src = Join-Path $root $item
+
+    if (Test-Path $src -PathType Leaf) {
+        $entry = $item.Replace('\', '/')
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $zip, $src, $entry, 'Optimal'
+        ) | Out-Null
+
+    } elseif (Test-Path $src -PathType Container) {
+        Get-ChildItem $src -Recurse -File | ForEach-Object {
+            $entry = $_.FullName.Substring($root.Length + 1).Replace('\', '/')
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $zip, $_.FullName, $entry, 'Optimal'
+            ) | Out-Null
+        }
     }
 }
 
-Compress-Archive -Path "$tmp\*" -DestinationPath $outFile
-Remove-Item $tmp -Recurse -Force
+$zip.Dispose()
 
 Write-Host ""
-Write-Host "Готово! Файл для загрузки в магазин:" -ForegroundColor Green
+Write-Host "Done! Upload this file to Chrome Web Store / Firefox AMO:" -ForegroundColor Green
 Write-Host $outFile -ForegroundColor Cyan
 Write-Host ""
-pause
+Read-Host "Press Enter to exit"
