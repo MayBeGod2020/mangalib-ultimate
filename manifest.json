@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mangalib Ultimate Helper",
-  "version": "3.6",
+  "version": "3.7",
   "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
 
   "icons": {
@@ -11,8 +11,7 @@
   },
 
   "permissions": [
-    "storage",
-    "alarms"
+    "storage"
   ],
 
   "host_permissions": [
@@ -29,8 +28,7 @@
     "https://api.anthropic.com/*",
     "https://dashscope.aliyuncs.com/*",
     "https://api.x.ai/*",
-    "https://api.mistral.ai/*",
-    "https://raw.githubusercontent.com/*"
+    "https://api.mistral.ai/*"
   ],
 
   "background": {
