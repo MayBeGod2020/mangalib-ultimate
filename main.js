@@ -35,29 +35,37 @@
             return container;
         }
 
-        // === ГЛАВНАЯ И ДРУГИЕ СТРАНИЦЫ: position:fixed слева от гамбургера ===
-        // Не вставляем в DOM шапки — не сдвигаем нативные кнопки.
+        // === ГЛАВНАЯ И ДРУГИЕ СТРАНИЦЫ: position:absolute внутри шапки ===
+        // Абсолютное позиционирование внутри fixed-шапки: не сдвигает flex-элементы,
+        // right отсчитывается от правого края шапки (= ширина кнопки гамбургера + зазор).
         const header = document.querySelector('[data-header]');
-        const barsSvg = header?.querySelector('svg[data-icon="bars"]');
+        if (header) {
+            // Измеряем ширину кнопки-гамбургера, чтобы встать ровно левее неё
+            const barsSvg = header.querySelector('svg[data-icon="bars"]');
+            const barsBtn = barsSvg?.parentElement?.parentElement; // svg→w5_eb→w5_c5
+            const barsW   = barsBtn ? barsBtn.getBoundingClientRect().width : 40;
 
-        let topPx = 8, rightPx = 55;
-        if (header && barsSvg) {
-            const hRect = header.getBoundingClientRect();
-            // svg → div.w5_eb → div.w5_c5 (внешняя обёртка кнопки)
-            const barsBtn = barsSvg.parentElement?.parentElement;
-            const bRect = (barsBtn || barsSvg).getBoundingClientRect();
-            topPx   = Math.round(hRect.top + (hRect.height - 32) / 2);
-            rightPx = Math.round(window.innerWidth - bRect.left + 4);
+            container.style.cssText += `
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                right: ${Math.round(barsW + 8)}px;
+                z-index: 100;
+            `;
+            header.appendChild(container);
+            MU.log('Main', 'Main: кнопки absolute в header, right:', Math.round(barsW + 8));
+            return container;
         }
 
+        // Фолбэк: нет шапки — fixed в правом верхнем углу
         container.style.cssText += `
             position: fixed;
-            top: ${topPx}px;
-            right: ${rightPx}px;
+            top: 8px;
+            right: 55px;
             z-index: 9999;
         `;
         document.body.appendChild(container);
-        MU.log('Main', 'Main: кнопки fixed, right:', rightPx, 'top:', topPx);
+        MU.log('Main', 'Main: кнопки fixed (fallback)');
         return container;
     }
 
