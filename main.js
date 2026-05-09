@@ -6,78 +6,43 @@
 
     const MU = window.MULib;
 
-    // Ищем элемент в шапке сайта перед которым вставим наши кнопки.
-    // Возвращает { anchor, mode } или null.
-    function findHeaderSlot() {
-        // Все поиски иконок делаем ТОЛЬКО внутри шапки [data-header],
-        // чтобы случайно не поймать одноимённые иконки в контенте страницы
-        // (например, fa-gear в «Последние обновления» или fa-bars в статьях).
-        const header = document.querySelector('[data-header]');
-        if (!header) return null;
-
-        // === Читалка ===
-        // Блок с кнопками закладки / заметок / шестерёнки читалки
-        for (const icon of ['gear', 'bookmark', 'note-sticky']) {
-            const svg = header.querySelector(`svg[data-icon="${icon}"]`);
-            if (!svg) continue;
-            // svg → div-обёртка → блок нативных кнопок (то, перед чем встаём)
-            const block = svg.parentElement?.parentElement;
-            if (block?.parentElement) return { anchor: block, mode: 'before' };
-        }
-
-        // === Основные страницы сайта ===
-        // Гамбургер-меню (fa-bars) — последняя кнопка в правом блоке шапки
-        // Структура: svg → div.w5_eb → div.w5_c5 → div.l9_t.l9_bc
-        const bars = header.querySelector('svg[data-icon="bars"]');
-        if (bars) {
-            // svg → иконка-обёртка → div.w5_c5 (то, перед чем встаём в flex-ряду)
-            const barsBtn = bars.parentElement?.parentElement;
-            if (barsBtn?.parentElement) return { anchor: barsBtn, mode: 'before' };
-        }
-
-        // === Фолбэк внутри шапки: prepend в последний дочерний блок ===
-        const lastBlock = header.lastElementChild?.lastElementChild;
-        if (lastBlock) return { anchor: lastBlock, mode: 'prepend' };
-
-        return null;
-    }
-
-    // Контейнер для кнопок (Dashboard + Settings)
+    // Контейнер для кнопок (Dashboard + Settings).
+    // Используем position:fixed — не вставляем в DOM шапки, не сдвигаем нативные кнопки.
+    // Позиционируем после блока логотипа (слева), вертикально по центру шапки.
     function createButtonContainer() {
         if (document.getElementById('mu-button-container')) return document.getElementById('mu-button-container');
 
         const container = document.createElement('div');
         container.id = 'mu-button-container';
+
+        // Вычисляем позицию: сразу после блока логотипа, вертикально по центру шапки
+        const headerEl  = document.querySelector('[data-header]');
+        const logoBlock = headerEl?.querySelector(':scope > * > *:first-child');
+
+        let topPx  = 8;
+        let leftPx = 200; // запасной вариант, если не нашли шапку
+
+        if (headerEl) {
+            const hRect = headerEl.getBoundingClientRect();
+            topPx = Math.round(hRect.top + (hRect.height - 32) / 2);
+        }
+        if (logoBlock) {
+            const lRect = logoBlock.getBoundingClientRect();
+            leftPx = Math.round(lRect.right + 10);
+        }
+
         container.style.cssText = `
             display: flex;
             align-items: center;
             gap: 8px;
             font-family: -apple-system, sans-serif;
-            margin-right: 4px;
+            position: fixed;
+            top: ${topPx}px;
+            left: ${leftPx}px;
+            z-index: 9999;
         `;
-
-        const slot = findHeaderSlot();
-        if (slot) {
-            if (slot.mode === 'before') {
-                // Вставляем перед найденным элементом (читалка / гамбургер)
-                slot.anchor.parentElement.insertBefore(container, slot.anchor);
-            } else {
-                // prepend — добавляем в начало последнего блока шапки
-                slot.anchor.prepend(container);
-            }
-            MU.log('Main', 'Кнопки вставлены в header, mode:', slot.mode);
-        } else {
-            // Последний фолбэк: fixed поверх всего
-            container.style.cssText += `
-                position: fixed;
-                top: 12px;
-                right: 16px;
-                z-index: 2147483647;
-            `;
-            document.body.appendChild(container);
-            MU.log('Main', 'Кнопки в fixed-контейнере (header не найден)');
-        }
-
+        document.body.appendChild(container);
+        MU.log('Main', 'Кнопки в fixed-контейнере, left:', leftPx, 'top:', topPx);
         return container;
     }
 
@@ -94,41 +59,33 @@
         // Определяем акцентный цвет сайта и выставляем --mu-accent
         MU.detectAccentColor();
 
-        // Запускаем модули в правильном порядке
-        // 1. Персонализация — самая первая, чтобы стили применились сразу
-        await window.MUPersonalization.init();
+        // Запускаем модули в правильном порядке.
+        // .catch() на каждом: ошибка в одном модуле не роняет всё расширение.
+        await window.MUPersonalization.init().catch(e => MU.log('Main', 'Personalization err:', e));
+        await window.MUReader.init().catch(e => MU.log('Main', 'Reader err:', e));
+        await window.MUModeration.init().catch(e => MU.log('Main', 'Moderation err:', e));
+        await window.MUAiVerdict.init().catch(e => MU.log('Main', 'AIVerdict err:', e));
 
-        // 2. Reader (автоскролл при чтении)
-        await window.MUReader.init();
+        const settingsModule = await window.MUSettingsUI.init()
+            .catch(e => { MU.log('Main', 'SettingsUI err:', e); return null; });
 
-        // 3. Модерация
-        await window.MUModeration.init();
+        await window.MUUserTooltip.init().catch(e => MU.log('Main', 'Tooltip err:', e));
 
-        // 4. AI Verdict
-        await window.MUAiVerdict.init();
+        const dashboardModule = await window.MUDashboard.init()
+            .catch(e => { MU.log('Main', 'Dashboard err:', e); return null; });
 
-        // 5. Settings UI (кнопка ⚙️)
-        const settingsModule = await window.MUSettingsUI.init();
-
-        // 6. User Tooltip — попап при наведении на ник
-        await window.MUUserTooltip.init();
-
-        // 7. Dashboard — последний, чтобы быть рядом с шестерёнкой
-        const dashboardModule = await window.MUDashboard.init();
-
-        // Встраиваем кнопки в контейнер в правом верхнем углу
-        // Порядок: Панель → Шестерёнка
+        // Встраиваем кнопки (position:fixed — не влияет на layout шапки)
         const container = createButtonContainer();
 
-        // Кнопка панели (если модуль доступен — пользователь модератор)
         if (dashboardModule?.isAvailable) {
-            const dashBtn = dashboardModule.createButton();
+            const dashBtn = dashboardModule.createButton?.();
             if (dashBtn) container.appendChild(dashBtn);
         }
 
-        // Кнопка настроек (всегда показывается)
-        const settingsBtn = settingsModule.createButton();
-        if (settingsBtn) container.appendChild(settingsBtn);
+        if (settingsModule) {
+            const settingsBtn = settingsModule.createButton?.();
+            if (settingsBtn) container.appendChild(settingsBtn);
+        }
 
         MU.log('Main', 'Все модули запущены');
     }
