@@ -6,17 +6,41 @@
 
     const MU = window.MULib;
 
-    // Ищем блок нативных кнопок читалки (закладка / заметки / шестерёнка).
-    // Возвращаем этот блок — наш контейнер вставим ДО него в том же родителе.
+    // Ищем элемент в шапке сайта перед которым вставим наши кнопки.
+    // Возвращает { anchor, mode } или null.
     function findHeaderSlot() {
-        // Lib-сайты используют FontAwesome с data-icon — стабильный атрибут
+        // === Читалка ===
+        // Блок с кнопками закладки / заметок / шестерёнки читалки
         for (const icon of ['gear', 'bookmark', 'note-sticky']) {
             const svg = document.querySelector(`svg[data-icon="${icon}"]`);
             if (!svg) continue;
-            // svg → div-обёртка → контейнер кнопок сайта
-            const actionsBlock = svg.parentElement?.parentElement;
-            if (actionsBlock?.parentElement) return actionsBlock;
+            // svg → div-обёртка → блок нативных кнопок (то, перед чем встаём)
+            const block = svg.parentElement?.parentElement;
+            if (block?.parentElement) return { anchor: block, mode: 'before' };
         }
+
+        // === Основные страницы сайта ===
+        // Гамбургер-меню (fa-bars) — последняя кнопка в правом блоке шапки
+        // Структура: svg → div.w5_eb → div.w5_c5 → div.l9_t.l9_bc
+        const bars = document.querySelector('svg[data-icon="bars"]');
+        if (bars) {
+            // svg → иконка-обёртка → div.w5_c5 (то, перед чем встаём в flex-ряду)
+            const barsBtn = bars.parentElement?.parentElement;
+            if (barsBtn?.parentElement) return { anchor: barsBtn, mode: 'before' };
+        }
+
+        // === Фолбэк: любой fixed/sticky header вверху страницы ===
+        const header = [...document.querySelectorAll('header, [role="banner"]')]
+            .find(el => {
+                const s = getComputedStyle(el);
+                const r = el.getBoundingClientRect();
+                return (s.position === 'fixed' || s.position === 'sticky')
+                    && r.top < 10 && r.height < 100;
+            });
+        if (header?.lastElementChild) {
+            return { anchor: header.lastElementChild, mode: 'prepend' };
+        }
+
         return null;
     }
 
@@ -35,17 +59,22 @@
         `;
 
         const slot = findHeaderSlot();
-        if (slot?.parentElement) {
-            // Вставляем ПЕРЕД блоком нативных кнопок — в той же строке header
-            slot.parentElement.insertBefore(container, slot);
-            MU.log('Main', 'Кнопки вставлены в header сайта');
+        if (slot) {
+            if (slot.mode === 'before') {
+                // Вставляем перед найденным элементом (читалка / гамбургер)
+                slot.anchor.parentElement.insertBefore(container, slot.anchor);
+            } else {
+                // prepend — добавляем в начало последнего блока шапки
+                slot.anchor.prepend(container);
+            }
+            MU.log('Main', 'Кнопки вставлены в header, mode:', slot.mode);
         } else {
-            // Фолбэк: фиксированное позиционирование
+            // Последний фолбэк: fixed поверх всего
             container.style.cssText += `
                 position: fixed;
                 top: 12px;
                 right: 16px;
-                z-index: 99999;
+                z-index: 2147483647;
             `;
             document.body.appendChild(container);
             MU.log('Main', 'Кнопки в fixed-контейнере (header не найден)');
