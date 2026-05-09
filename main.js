@@ -6,34 +6,21 @@
 
     const MU = window.MULib;
 
-    // Ищем правую часть шапки сайта чтобы вставить кнопки туда,
-    // а не поверх нативных элементов управления.
+    // Ищем блок нативных кнопок читалки (закладка / заметки / шестерёнка).
+    // Возвращаем этот блок — наш контейнер вставим ДО него в том же родителе.
     function findHeaderSlot() {
-        const selectors = [
-            // Семейство Lib — возможные варианты шапки
-            '.header__right',
-            '.header-actions',
-            '[class*="header__actions"]',
-            '[class*="header__right"]',
-            '[class*="header__controls"]',
-            '.app-header [class*="right"]',
-            '.site-header [class*="right"]',
-            // Читалка
-            '[class*="reader__header"] [class*="right"]',
-            '[class*="reader-header"] [class*="right"]',
-        ];
-        for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            // Убеждаемся что элемент видим и находится вверху страницы
-            if (el) {
-                const rect = el.getBoundingClientRect();
-                if (rect.top < 80) return el;
-            }
+        // Lib-сайты используют FontAwesome с data-icon — стабильный атрибут
+        for (const icon of ['gear', 'bookmark', 'note-sticky']) {
+            const svg = document.querySelector(`svg[data-icon="${icon}"]`);
+            if (!svg) continue;
+            // svg → div-обёртка → контейнер кнопок сайта
+            const actionsBlock = svg.parentElement?.parentElement;
+            if (actionsBlock?.parentElement) return actionsBlock;
         }
         return null;
     }
 
-    // Контейнер для кнопок (Dashboard + Settings) в правом верхнем углу
+    // Контейнер для кнопок (Dashboard + Settings)
     function createButtonContainer() {
         if (document.getElementById('mu-button-container')) return document.getElementById('mu-button-container');
 
@@ -44,14 +31,14 @@
             align-items: center;
             gap: 8px;
             font-family: -apple-system, sans-serif;
+            margin-right: 4px;
         `;
 
         const slot = findHeaderSlot();
-        if (slot) {
-            // Вставляем в шапку сайта — кнопки будут рядом с нативными
-            container.style.marginRight = '4px';
-            slot.prepend(container);
-            MU.log('Main', 'Кнопки вставлены в header:', slot.className);
+        if (slot?.parentElement) {
+            // Вставляем ПЕРЕД блоком нативных кнопок — в той же строке header
+            slot.parentElement.insertBefore(container, slot);
+            MU.log('Main', 'Кнопки вставлены в header сайта');
         } else {
             // Фолбэк: фиксированное позиционирование
             container.style.cssText += `
