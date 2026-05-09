@@ -231,7 +231,7 @@ window.MUAiVerdict = (function () {
         `;
 
         if (state === 'loading') {
-            panel.innerHTML = `
+            MU.setHTML(panel, `
                 <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;
                     color:var(--text-secondary,#8a8a8e);">
                     <span style="display:inline-block;width:16px;height:16px;
@@ -239,11 +239,11 @@ window.MUAiVerdict = (function () {
                         border-top-color:var(--mu-accent, #f39c12);border-radius:50%;
                         animation:mu-ai-spin 0.8s linear infinite;flex-shrink:0;"></span>
                     <span>ИИ анализирует комментарий…</span>
-                    <button onclick="document.getElementById('${PANEL_ID}').remove()"
+                    <button id="mu-ai-loading-close"
                         style="margin-left:auto;background:none;border:none;
                         color:var(--text-secondary,#8a8a8e);cursor:pointer;font-size:16px;padding:0;">✕</button>
                 </div>
-            `;
+            `);
         } else if (state === 'result') {
             const colors = {
                 'нарушает':    { bg: 'rgba(231,76,60,0.06)',  border: '#e74c3c', icon: '🚫' },
@@ -253,24 +253,27 @@ window.MUAiVerdict = (function () {
             const c = colors[data.verdict] || colors['спорно'];
             const confColor = { 'высокая': '#2ecc71', 'средняя': '#f39c12', 'низкая': '#e74c3c' };
 
+            const esc = MU.esc;
+            const verdictLabel = esc(data.verdict.charAt(0).toUpperCase() + data.verdict.slice(1));
+
             panel.style.background  = `var(--background-elevated-1,#fff)`;
             panel.style.borderColor = c.border;
-            panel.innerHTML = `
+            MU.setHTML(panel, `
                 <div style="padding:10px 14px;border-bottom:1px solid ${c.border}33;
                     background:${c.bg};display:flex;align-items:center;gap:8px;">
                     <span style="font-size:16px;">${c.icon}</span>
                     <span style="font-weight:700;color:${c.border};font-size:13px;">
-                        ${data.verdict.charAt(0).toUpperCase() + data.verdict.slice(1)}
+                        ${verdictLabel}
                     </span>
-                    ${data.rule ? `<span style="margin-left:4px;color:var(--text-secondary,#8a8a8e);font-size:11px;">· ${data.rule}</span>` : ''}
-                    <button onclick="document.getElementById('${PANEL_ID}').remove()"
+                    ${data.rule ? `<span style="margin-left:4px;color:var(--text-secondary,#8a8a8e);font-size:11px;">· ${esc(data.rule)}</span>` : ''}
+                    <button id="mu-ai-close-btn"
                         style="margin-left:auto;background:none;border:none;
                         color:var(--text-secondary,#8a8a8e);cursor:pointer;font-size:16px;padding:0;line-height:1;">✕</button>
                 </div>
                 <div style="padding:10px 14px;">
-                    <div style="color:var(--text-primary,#212529);line-height:1.5;margin-bottom:8px;">${data.reason || ''}</div>
+                    <div style="color:var(--text-primary,#212529);line-height:1.5;margin-bottom:8px;">${esc(data.reason || '')}</div>
                     <div style="color:${confColor[data.confidence] || 'var(--text-secondary,#8a8a8e)'};font-size:10px;opacity:0.8;">
-                        Уверенность: ${data.confidence || '—'}
+                        Уверенность: ${esc(data.confidence || '—')}
                     </div>
                 </div>
                 <div style="padding:0 14px 10px;display:flex;gap:6px;">
@@ -283,18 +286,21 @@ window.MUAiVerdict = (function () {
                         🔄 Перепроверить
                     </button>
                 </div>
-            `;
+            `);
+            document.getElementById('mu-ai-close-btn')?.addEventListener('click', () => {
+                document.getElementById(PANEL_ID)?.remove();
+            });
         } else if (state === 'error') {
             panel.style.borderColor = '#e74c3c';
-            panel.innerHTML = `
+            MU.setHTML(panel, `
                 <div style="padding:12px 14px;color:#e74c3c;display:flex;align-items:center;gap:8px;">
                     <span>⚠️</span>
-                    <span style="flex:1;">${data.message || 'Ошибка запроса к ИИ'}</span>
-                    <button onclick="document.getElementById('${PANEL_ID}').remove()"
+                    <span style="flex:1;">${MU.esc(data.message || 'Ошибка запроса к ИИ')}</span>
+                    <button id="mu-ai-error-close"
                         style="background:none;border:none;
                         color:var(--text-secondary,#8a8a8e);cursor:pointer;font-size:16px;padding:0;">✕</button>
                 </div>
-            `;
+            `);
         }
 
         // CSS анимации
@@ -312,6 +318,14 @@ window.MUAiVerdict = (function () {
         }
 
         document.body.appendChild(panel);
+
+        // Кнопки закрытия (loading / error / result)
+        document.getElementById('mu-ai-loading-close')?.addEventListener('click', () => {
+            document.getElementById(PANEL_ID)?.remove();
+        });
+        document.getElementById('mu-ai-error-close')?.addEventListener('click', () => {
+            document.getElementById(PANEL_ID)?.remove();
+        });
 
         // Кнопка «Перепроверить»
         document.getElementById('mu-ai-rerun')?.addEventListener('click', () => {

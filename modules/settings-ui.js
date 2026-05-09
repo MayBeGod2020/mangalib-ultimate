@@ -212,14 +212,14 @@ window.MUSettingsUI = (function () {
 
         const panel = document.createElement('div');
         panel.id = 'mu-settings-panel';
-        panel.innerHTML = `
+        MU.setHTML(panel, `
             <div class="mu-settings-header">
                 <span class="mu-settings-title">⚙️ Настройки</span>
                 <button class="mu-settings-close" id="mu-settings-close-btn">✕</button>
             </div>
             <div class="mu-settings-tabs" id="mu-settings-tabs"></div>
             <div class="mu-settings-content" id="mu-settings-content"></div>
-        `;
+        `);
         document.body.appendChild(panel);
 
         document.getElementById('mu-settings-close-btn').addEventListener('click', () => {
@@ -266,11 +266,11 @@ window.MUSettingsUI = (function () {
             { id: 'ai', label: '🤖 ИИ' },
         ];
 
-        tabsEl.innerHTML = tabs.map(t => `
+        MU.setHTML(tabsEl, tabs.map(t => `
             <button class="mu-settings-tab ${t.id === activeTab ? 'active' : ''}" data-tab="${t.id}">
                 ${t.label}
             </button>
-        `).join('');
+        `).join(''));
 
         tabsEl.querySelectorAll('[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -288,11 +288,11 @@ window.MUSettingsUI = (function () {
         const contentEl = document.getElementById('mu-settings-content');
         if (!contentEl) return;
 
-        if (tabId === 'moderation') contentEl.innerHTML = renderModerationTab();
-        if (tabId === 'dashboard') contentEl.innerHTML = renderDashboardTab();
-        if (tabId === 'reader') contentEl.innerHTML = renderReaderTab();
-        if (tabId === 'personalization') contentEl.innerHTML = renderPersonalizationTab();
-        if (tabId === 'ai') contentEl.innerHTML = renderAiTab();
+        if (tabId === 'moderation') MU.setHTML(contentEl, renderModerationTab());
+        if (tabId === 'dashboard') MU.setHTML(contentEl, renderDashboardTab());
+        if (tabId === 'reader') MU.setHTML(contentEl, renderReaderTab());
+        if (tabId === 'personalization') MU.setHTML(contentEl, renderPersonalizationTab());
+        if (tabId === 'ai') MU.setHTML(contentEl, renderAiTab());
 
         attachListeners(tabId);
     }
@@ -459,10 +459,10 @@ window.MUSettingsUI = (function () {
                 </div>
                 <input type="file" class="mu-input" id="mu-wallpaper-file" accept="image/*" style="margin-top:6px">
                 <input type="text" class="mu-input" id="mu-wallpaper-url" placeholder="Или вставьте URL изображения"
-                       value="${(p.customWallpaper && p.customWallpaper.startsWith('http')) ? p.customWallpaper : ''}"
+                       value="${MU.esc((p.customWallpaper && p.customWallpaper.startsWith('http')) ? p.customWallpaper : '')}"
                        style="margin-top:6px">
                 ${p.customWallpaper ? `
-                    <div class="mu-wallpaper-preview" style="background-image:url('${p.customWallpaper}')">
+                    <div class="mu-wallpaper-preview" style="background-image:url('${MU.esc(p.customWallpaper)}')">
                         ${p.customWallpaper.startsWith('data:') ? 'Загруженное изображение' : ''}
                     </div>
                     <button class="mu-btn mu-btn-danger" id="mu-clear-wallpaper" style="margin-top:6px;font-size:10px">Удалить фон</button>
@@ -567,12 +567,12 @@ window.MUSettingsUI = (function () {
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
                 <div class="mu-setting-label">API ключ</div>
                 <div class="mu-setting-desc" id="mu-ai-hint" style="margin-bottom:4px;">
-                    Получить на <a href="https://${p.hint}" target="_blank" style="color:var(--mu-accent, #f39c12);">${p.hint}</a>
+                    Получить на <a href="https://${MU.esc(p.hint)}" target="_blank" style="color:var(--mu-accent, #f39c12);">${MU.esc(p.hint)}</a>
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">
                     <input type="password" id="mu-ai-key-input" class="mu-input"
-                        placeholder="${p.ph}"
-                        value="${currentKey}"
+                        placeholder="${MU.esc(p.ph)}"
+                        value="${MU.esc(currentKey)}"
                         style="flex:1;font-size:11px;">
                     <button id="mu-ai-key-save" class="mu-btn"
                         style="padding:6px 12px;font-size:11px;white-space:nowrap;">

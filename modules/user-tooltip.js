@@ -122,16 +122,16 @@ window.MUUserTooltip = (function () {
         // Создаём "скелетон" сразу
         const tip = document.createElement('div');
         tip.id = TOOLTIP_ID;
-        tip.innerHTML = `
+        MU.setHTML(tip, `
             <div class="mu-tt-header">
                 <div class="mu-tt-avatar" style="display:flex;align-items:center;justify-content:center;
                     color:var(--text-secondary,#8a8a8e);font-size:18px;">👤</div>
-                <div class="mu-tt-username">${username}</div>
+                <div class="mu-tt-username">${MU.esc(username)}</div>
             </div>
             <div class="mu-tt-body">
                 <div class="mu-tt-row">Загружаю…</div>
             </div>
-        `;
+        `);
         document.body.appendChild(tip);
         currentTooltip = tip;
         positionTooltip(tip, anchorEl);
@@ -156,7 +156,7 @@ window.MUUserTooltip = (function () {
             }
 
             // Роли
-            const roles = (data.roles || []).map(r => r.name || r).join(', ');
+            const roles = MU.esc((data.roles || []).map(r => r.name || r).join(', '));
 
             // Уровень
             const level = data.points_info?.level ?? null;
@@ -165,14 +165,14 @@ window.MUUserTooltip = (function () {
             const regDate = formatDate(data.created_at);
 
             // Тело
-            tip.querySelector('.mu-tt-body').innerHTML = `
+            MU.setHTML(tip.querySelector('.mu-tt-body'), `
                 ${level !== null ? `
                 <div class="mu-tt-row">⭐ Уровень: <b>${level}</b>
                     ${data.points_info?.total_points ? `<span style="color:#555">(${data.points_info.total_points.toLocaleString('ru')} очков)</span>` : ''}
                 </div>` : ''}
                 <div class="mu-tt-row">📅 Регистрация: <b>${regDate}</b></div>
                 ${roles ? `<div class="mu-tt-row">🎭 Роли: <b>${roles}</b></div>` : ''}
-            `;
+            `);
 
             // Бан — ban_info это массив активных банов
             const bans = Array.isArray(data.ban_info) ? data.ban_info : (data.ban_info ? [data.ban_info] : []);
@@ -185,7 +185,7 @@ window.MUUserTooltip = (function () {
                     const type   = ban.type === 'social' ? 'Соц.' : ban.type === 'functional' ? 'Функц.' : '';
                     const banEl  = document.createElement('div');
                     banEl.className = 'mu-tt-banned';
-                    banEl.innerHTML = `🔨 <b>Забанен ${until}</b>${type ? ` <span style="opacity:0.6;font-size:10px">(${type})</span>` : ''}<br><span style="opacity:0.8">${reason}</span>`;
+                    MU.setHTML(banEl, `🔨 <b>Забанен ${MU.esc(until)}</b>${type ? ` <span style="opacity:0.6;font-size:10px">(${MU.esc(type)})</span>` : ''}<br><span style="opacity:0.8">${MU.esc(reason)}</span>`);
                     tip.appendChild(banEl);
                 });
                 tip.style.borderColor = '#e74c3c44';

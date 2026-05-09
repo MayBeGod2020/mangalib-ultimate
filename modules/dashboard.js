@@ -219,10 +219,10 @@ window.MUDashboard = (function() {
 
         const btn = document.createElement('button');
         btn.id = 'mu-dashboard-toggle';
-        btn.innerHTML = `
+        MU.setHTML(btn, `
             📊 Панель
             <span id="mu-online-count" style="background:#2ecc71;color:#000;border-radius:10px;padding:0 5px;font-size:10px;font-weight:700;">—</span>
-        `;
+        `);
         btn.addEventListener('click', toggleDashboard);
         return btn;
     }
@@ -232,14 +232,14 @@ window.MUDashboard = (function() {
 
         const panel = document.createElement('div');
         panel.id = 'mu-dashboard-panel';
-        panel.innerHTML = `
+        MU.setHTML(panel, `
             <div class="mu-dash-section" style="background:#12122a">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                     <span style="color:#9b59b6;font-weight:700;font-size:13px">📊 Панель управления</span>
                     <span id="mu-dash-updated" style="color:#333;font-size:10px"></span>
                 </div>
                 <div style="color:#555;font-size:10px;margin-top:2px">
-                    Вы: <span style="color:#9b59b6" id="mu-dash-me-name">${ME.username}</span>
+                    Вы: <span style="color:#9b59b6" id="mu-dash-me-name">${MU.esc(ME.username)}</span>
                 </div>
             </div>
             <div id="mu-announcement-section" class="mu-dash-section" style="display:none">
@@ -268,7 +268,7 @@ window.MUDashboard = (function() {
                     <button class="mu-dash-btn" id="mu-announce-btn" style="color:#9b59b6">📢 Объявление</button>
                 </div>
             </div>
-        `;
+        `);
         document.body.appendChild(panel);
 
         // Закрытие по клику вне
@@ -344,12 +344,12 @@ window.MUDashboard = (function() {
             });
 
             const groupOrder = ['Админ', 'Модератор', 'Модератор Анонсов', 'Модератор Форума'];
-            listEl.innerHTML = groupOrder.filter(g => groups[g]).map(groupName => {
+            MU.setHTML(listEl, groupOrder.filter(g => groups[g]).map(groupName => {
                 const items = groups[groupName].map(mod => `
                     <div class="mu-mod-item" data-mod-id="${mod.id}">
                         <span class="mu-mod-dot mu-mod-dot-offline"></span>
                         <span class="mu-mod-name mu-mod-name-offline">
-                            ${mod.username}${mod.id === ME.id ? ' <span style="color:#555;font-size:10px">(вы)</span>' : ''}
+                            ${MU.esc(mod.username)}${mod.id === ME.id ? ' <span style="color:#555;font-size:10px">(вы)</span>' : ''}
                         </span>
                         <span class="mu-mod-time" style="color:#444;font-size:10px;margin-left:auto"></span>
                     </div>
@@ -363,7 +363,7 @@ window.MUDashboard = (function() {
                         ${items}
                     </div>
                 `;
-            }).join('');
+            }).join(''));
         }
 
         ['Админ', 'Модератор', 'Модератор Анонсов', 'Модератор Форума'].forEach(groupName => {
@@ -399,7 +399,7 @@ window.MUDashboard = (function() {
 
         if (announcement?.text) {
             annSection.style.display = 'block';
-            annText.innerHTML = `<b style="color:#e74c3c">${announcement.author}:</b> ${announcement.text}`;
+            MU.setHTML(annText, `<b style="color:#e74c3c">${MU.esc(announcement.author)}:</b> ${MU.esc(announcement.text)}`);
         } else {
             annSection.style.display = 'none';
         }
@@ -411,11 +411,11 @@ window.MUDashboard = (function() {
         if (!watchEl) return;
 
         if (currentWatchlist.length > 0) {
-            watchEl.innerHTML = currentWatchlist.map(w => `
-                <span class="mu-watch-tag" data-watchid="${w.id}" title="Добавил ${w.addedBy}">
-                    ${w.term} ✕
+            MU.setHTML(watchEl, currentWatchlist.map(w => `
+                <span class="mu-watch-tag" data-watchid="${MU.esc(w.id)}" title="Добавил ${MU.esc(w.addedBy)}">
+                    ${MU.esc(w.term)} ✕
                 </span>
-            `).join('');
+            `).join(''));
             watchEl.querySelectorAll('[data-watchid]').forEach(el => {
                 el.addEventListener('click', async () => {
                     if (confirm(`Удалить "${el.textContent.trim().replace(' ✕', '')}"?`)) {

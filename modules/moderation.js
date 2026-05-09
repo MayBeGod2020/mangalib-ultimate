@@ -473,14 +473,14 @@ window.MUModeration = (function() {
         // Индикатор прогресса
         const progress = document.createElement('div');
         progress.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0f0f1a;border:2px solid #e74c3c;border-radius:12px;padding:20px 30px;z-index:99999;color:#fff;font-family:-apple-system,sans-serif;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.8);min-width:240px;`;
-        progress.innerHTML = `
+        MU.setHTML(progress, `
             <div style="color:#e74c3c;font-size:14px;font-weight:600;margin-bottom:10px">🗑️ Массовое удаление</div>
-            <div id="mass-progress-text" style="color:#ccc;font-size:12px;margin-bottom:8px">0 / ${count}</div>
+            <div id="mass-progress-text" style="color:#ccc;font-size:12px;margin-bottom:8px">0 / ${MU.esc(count)}</div>
             <div style="width:200px;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden;margin:0 auto">
                 <div id="mass-progress-bar" style="width:0%;height:100%;background:#e74c3c;transition:width 0.2s"></div>
             </div>
             <button id="mass-cancel-btn" style="margin-top:12px;padding:4px 12px;border:1px solid #95a5a6;background:transparent;color:#95a5a6;border-radius:6px;cursor:pointer;font-size:11px">Остановить</button>
-        `;
+        `);
         document.body.appendChild(progress);
 
         let cancelled = false;
@@ -509,10 +509,10 @@ window.MUModeration = (function() {
             }
         }
 
-        progress.innerHTML = `
+        MU.setHTML(progress, `
             <div style="color:#2ecc71;font-size:14px;font-weight:600;margin-bottom:6px">✓ Готово</div>
-            <div style="color:#ccc;font-size:12px">Удалено ${processed} из ${count}${cancelled ? ' (остановлено)' : ''}</div>
-        `;
+            <div style="color:#ccc;font-size:12px">Удалено ${MU.esc(processed)} из ${MU.esc(count)}${cancelled ? ' (остановлено)' : ''}</div>
+        `);
         setTimeout(() => progress.remove(), 2500);
     }
 
