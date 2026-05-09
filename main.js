@@ -9,10 +9,16 @@
     // Ищем элемент в шапке сайта перед которым вставим наши кнопки.
     // Возвращает { anchor, mode } или null.
     function findHeaderSlot() {
+        // Все поиски иконок делаем ТОЛЬКО внутри шапки [data-header],
+        // чтобы случайно не поймать одноимённые иконки в контенте страницы
+        // (например, fa-gear в «Последние обновления» или fa-bars в статьях).
+        const header = document.querySelector('[data-header]');
+        if (!header) return null;
+
         // === Читалка ===
         // Блок с кнопками закладки / заметок / шестерёнки читалки
         for (const icon of ['gear', 'bookmark', 'note-sticky']) {
-            const svg = document.querySelector(`svg[data-icon="${icon}"]`);
+            const svg = header.querySelector(`svg[data-icon="${icon}"]`);
             if (!svg) continue;
             // svg → div-обёртка → блок нативных кнопок (то, перед чем встаём)
             const block = svg.parentElement?.parentElement;
@@ -22,24 +28,16 @@
         // === Основные страницы сайта ===
         // Гамбургер-меню (fa-bars) — последняя кнопка в правом блоке шапки
         // Структура: svg → div.w5_eb → div.w5_c5 → div.l9_t.l9_bc
-        const bars = document.querySelector('svg[data-icon="bars"]');
+        const bars = header.querySelector('svg[data-icon="bars"]');
         if (bars) {
             // svg → иконка-обёртка → div.w5_c5 (то, перед чем встаём в flex-ряду)
             const barsBtn = bars.parentElement?.parentElement;
             if (barsBtn?.parentElement) return { anchor: barsBtn, mode: 'before' };
         }
 
-        // === Фолбэк: любой fixed/sticky header вверху страницы ===
-        const header = [...document.querySelectorAll('header, [role="banner"]')]
-            .find(el => {
-                const s = getComputedStyle(el);
-                const r = el.getBoundingClientRect();
-                return (s.position === 'fixed' || s.position === 'sticky')
-                    && r.top < 10 && r.height < 100;
-            });
-        if (header?.lastElementChild) {
-            return { anchor: header.lastElementChild, mode: 'prepend' };
-        }
+        // === Фолбэк внутри шапки: prepend в последний дочерний блок ===
+        const lastBlock = header.lastElementChild?.lastElementChild;
+        if (lastBlock) return { anchor: lastBlock, mode: 'prepend' };
 
         return null;
     }
