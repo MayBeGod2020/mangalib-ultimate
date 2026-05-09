@@ -33,7 +33,7 @@ window.MUSettingsUI = (function () {
             }
             #mu-settings-panel {
                 display:none;
-                position:fixed;top:50px;right:16px;width:390px;
+                position:fixed;top:52px;right:16px;width:390px;
                 max-height:82vh;
                 background:var(--background-elevated-1,#fff);
                 border:1px solid var(--border-base,#e5e5e5);
@@ -245,11 +245,30 @@ window.MUSettingsUI = (function () {
         renderTab('moderation');
     }
 
+    function closeSettings() {
+        const panel = document.getElementById('mu-settings-panel');
+        if (!panel) return;
+        panel.classList.remove('open');
+        isPanelOpen = false;
+    }
+
     function toggleSettings() {
         const panel = document.getElementById('mu-settings-panel');
         if (!panel) return;
         isPanelOpen = !panel.classList.contains('open');
         panel.classList.toggle('open');
+
+        if (isPanelOpen) {
+            // Позиционируем под кнопкой шестерёнки динамически
+            const btn = document.getElementById('mu-settings-toggle');
+            if (btn) {
+                const rect = btn.getBoundingClientRect();
+                panel.style.top  = (rect.bottom + 8) + 'px';
+                panel.style.right = (window.innerWidth - rect.right) + 'px';
+            }
+            // Закрываем панель дашборда если открыта
+            MU.emit('panelOpen', 'settings');
+        }
     }
 
     // ==================== ВКЛАДКИ ====================
@@ -727,6 +746,11 @@ window.MUSettingsUI = (function () {
 
         MU.on('settingsChanged', async () => {
             settings = await MU.getSettings();
+        });
+
+        // Закрываемся когда открывается панель дашборда
+        MU.on('panelOpen', (which) => {
+            if (which !== 'settings') closeSettings();
         });
 
         MU.log('SettingsUI', 'Модуль настроек запущен');

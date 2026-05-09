@@ -183,7 +183,7 @@ window.MUDashboard = (function() {
             }
             #mu-dashboard-toggle:hover { background:rgba(155,89,182,0.15); }
             #mu-dashboard-panel {
-                display:none;position:fixed;top:50px;right:16px;width:340px;
+                display:none;position:fixed;top:52px;right:16px;width:340px;
                 background:#0f0f1a;border:1px solid #2a2a3e;border-radius:12px;
                 box-shadow:0 8px 24px rgba(0,0,0,0.6);overflow:hidden;
                 z-index:99998;font-family:-apple-system,sans-serif;font-size:12px;
@@ -296,6 +296,13 @@ window.MUDashboard = (function() {
         });
     }
 
+    function closeDashboard() {
+        const panel = document.getElementById('mu-dashboard-panel');
+        if (!panel) return;
+        panel.classList.remove('open');
+        isPanelOpen = false;
+    }
+
     function toggleDashboard() {
         const panel = document.getElementById('mu-dashboard-panel');
         if (!panel) return;
@@ -304,6 +311,15 @@ window.MUDashboard = (function() {
         panel.classList.toggle('open');
 
         if (isPanelOpen) {
+            // Позиционируем под кнопкой динамически
+            const btn = document.getElementById('mu-dashboard-toggle');
+            if (btn) {
+                const rect = btn.getBoundingClientRect();
+                panel.style.top  = (rect.bottom + 8) + 'px';
+                panel.style.right = (window.innerWidth - rect.right) + 'px';
+            }
+            // Закрываем панель настроек если открыта
+            MU.emit('panelOpen', 'dashboard');
             refresh();
         }
     }
@@ -460,6 +476,11 @@ window.MUDashboard = (function() {
 
         injectStyles();
         createDashboardPanel();
+
+        // Закрываемся когда открывается панель настроек
+        MU.on('panelOpen', (which) => {
+            if (which !== 'dashboard') closeDashboard();
+        });
 
         // Подписка на изменение настроек
         MU.on('settingsChanged', async () => {

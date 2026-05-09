@@ -6,6 +6,33 @@
 
     const MU = window.MULib;
 
+    // Ищем правую часть шапки сайта чтобы вставить кнопки туда,
+    // а не поверх нативных элементов управления.
+    function findHeaderSlot() {
+        const selectors = [
+            // Семейство Lib — возможные варианты шапки
+            '.header__right',
+            '.header-actions',
+            '[class*="header__actions"]',
+            '[class*="header__right"]',
+            '[class*="header__controls"]',
+            '.app-header [class*="right"]',
+            '.site-header [class*="right"]',
+            // Читалка
+            '[class*="reader__header"] [class*="right"]',
+            '[class*="reader-header"] [class*="right"]',
+        ];
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            // Убеждаемся что элемент видим и находится вверху страницы
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                if (rect.top < 80) return el;
+            }
+        }
+        return null;
+    }
+
     // Контейнер для кнопок (Dashboard + Settings) в правом верхнем углу
     function createButtonContainer() {
         if (document.getElementById('mu-button-container')) return document.getElementById('mu-button-container');
@@ -13,16 +40,30 @@
         const container = document.createElement('div');
         container.id = 'mu-button-container';
         container.style.cssText = `
-            position: fixed;
-            top: 12px;
-            right: 16px;
-            z-index: 99999;
             display: flex;
             align-items: center;
             gap: 8px;
             font-family: -apple-system, sans-serif;
         `;
-        document.body.appendChild(container);
+
+        const slot = findHeaderSlot();
+        if (slot) {
+            // Вставляем в шапку сайта — кнопки будут рядом с нативными
+            container.style.marginRight = '4px';
+            slot.prepend(container);
+            MU.log('Main', 'Кнопки вставлены в header:', slot.className);
+        } else {
+            // Фолбэк: фиксированное позиционирование
+            container.style.cssText += `
+                position: fixed;
+                top: 12px;
+                right: 16px;
+                z-index: 99999;
+            `;
+            document.body.appendChild(container);
+            MU.log('Main', 'Кнопки в fixed-контейнере (header не найден)');
+        }
+
         return container;
     }
 
