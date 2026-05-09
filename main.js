@@ -7,42 +7,57 @@
     const MU = window.MULib;
 
     // Контейнер для кнопок (Dashboard + Settings).
-    // Используем position:fixed — не вставляем в DOM шапки, не сдвигаем нативные кнопки.
-    // Позиционируем после блока логотипа (слева), вертикально по центру шапки.
     function createButtonContainer() {
         if (document.getElementById('mu-button-container')) return document.getElementById('mu-button-container');
 
         const container = document.createElement('div');
         container.id = 'mu-button-container';
-
-        // Вычисляем позицию: сразу после блока логотипа, вертикально по центру шапки
-        const headerEl  = document.querySelector('[data-header]');
-        const logoBlock = headerEl?.querySelector(':scope > * > *:first-child');
-
-        let topPx  = 8;
-        let leftPx = 200; // запасной вариант, если не нашли шапку
-
-        if (headerEl) {
-            const hRect = headerEl.getBoundingClientRect();
-            topPx = Math.round(hRect.top + (hRect.height - 32) / 2);
-        }
-        if (logoBlock) {
-            const lRect = logoBlock.getBoundingClientRect();
-            leftPx = Math.round(lRect.right + 10);
-        }
-
         container.style.cssText = `
             display: flex;
             align-items: center;
             gap: 8px;
             font-family: -apple-system, sans-serif;
+        `;
+
+        // === ЧИТАЛКА: DOM-вставка перед блоком иконок (bookmark / note / gear) ===
+        // Структура: div.xz_b > … > div.xz_jm.xz_bc > div.xz_hi > svg[bookmark]
+        const readerHeader = document.querySelector('.xz_b');
+        if (readerHeader) {
+            const bookmarkSvg = readerHeader.querySelector('svg[data-icon="bookmark"]');
+            // svg → div.xz_hi.xz_ba → div.xz_jm.xz_bc
+            const actionBlock = bookmarkSvg?.parentElement?.parentElement;
+            if (actionBlock && actionBlock.parentElement === readerHeader) {
+                readerHeader.insertBefore(container, actionBlock);
+            } else {
+                readerHeader.appendChild(container);
+            }
+            MU.log('Main', 'Reader: кнопки вставлены перед блоком иконок читалки');
+            return container;
+        }
+
+        // === ГЛАВНАЯ И ДРУГИЕ СТРАНИЦЫ: position:fixed слева от гамбургера ===
+        // Не вставляем в DOM шапки — не сдвигаем нативные кнопки.
+        const header = document.querySelector('[data-header]');
+        const barsSvg = header?.querySelector('svg[data-icon="bars"]');
+
+        let topPx = 8, rightPx = 55;
+        if (header && barsSvg) {
+            const hRect = header.getBoundingClientRect();
+            // svg → div.w5_eb → div.w5_c5 (внешняя обёртка кнопки)
+            const barsBtn = barsSvg.parentElement?.parentElement;
+            const bRect = (barsBtn || barsSvg).getBoundingClientRect();
+            topPx   = Math.round(hRect.top + (hRect.height - 32) / 2);
+            rightPx = Math.round(window.innerWidth - bRect.left + 4);
+        }
+
+        container.style.cssText += `
             position: fixed;
             top: ${topPx}px;
-            left: ${leftPx}px;
+            right: ${rightPx}px;
             z-index: 9999;
         `;
         document.body.appendChild(container);
-        MU.log('Main', 'Кнопки в fixed-контейнере, left:', leftPx, 'top:', topPx);
+        MU.log('Main', 'Main: кнопки fixed, right:', rightPx, 'top:', topPx);
         return container;
     }
 
