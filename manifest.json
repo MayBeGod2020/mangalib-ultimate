@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mangalib Ultimate Helper",
-  "version": "3.10",
+  "version": "3.11",
   "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
 
   "browser_specific_settings": {
@@ -39,7 +39,8 @@
     "https://api.anthropic.com/*",
     "https://dashscope.aliyuncs.com/*",
     "https://api.x.ai/*",
-    "https://api.mistral.ai/*"
+    "https://api.mistral.ai/*",
+    "https://api.groq.com/*"
   ],
 
   "background": {
@@ -65,6 +66,8 @@
         "modules/ai-verdict.js",
         "modules/dashboard.js",
         "modules/settings-ui.js",
+        "modules/examples.js",
+        "modules/forum-analysis.js",
         "modules/user-tooltip.js",
         "main.js"
       ],

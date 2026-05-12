@@ -453,6 +453,36 @@ window.MUModeration = (function() {
         }
     }
 
+    // Ждёт появления попапа, таймаут ms
+    function waitForPopup(ms = 2500) {
+        return new Promise(resolve => {
+            const deadline = Date.now() + ms;
+            (function check() {
+                const p = document.querySelector('.popup-body')
+                       || document.querySelector('[class*="popup__body"]')
+                       || document.querySelector('.modal-body');
+                if (p)                    { resolve(p);    return; }
+                if (Date.now() > deadline){ resolve(null); return; }
+                setTimeout(check, 80);
+            })();
+        });
+    }
+
+    // Ждёт закрытия попапа, таймаут ms
+    function waitForPopupClose(ms = 4000) {
+        return new Promise(resolve => {
+            const deadline = Date.now() + ms;
+            (function check() {
+                const p = document.querySelector('.popup-body')
+                       || document.querySelector('[class*="popup__body"]')
+                       || document.querySelector('.modal-body');
+                if (!p)                   { resolve(); return; }
+                if (Date.now() > deadline){ resolve(); return; }
+                setTimeout(check, 80);
+            })();
+        });
+    }
+
     async function massDeleteVisible() {
         const visibleCards = [...document.querySelectorAll(CARD_SEL)].filter(c =>
             c.style.display !== 'none' && !c.dataset.viewed
@@ -484,36 +514,74 @@ window.MUModeration = (function() {
         document.body.appendChild(progress);
 
         let cancelled = false;
-        document.getElementById('mass-cancel-btn').addEventListener('click', () => {
-            cancelled = true;
-        });
+        document.getElementById('mass-cancel-btn')?.addEventListener('click', () => { cancelled = true; });
 
         let processed = 0;
+        let skipped   = 0;
+
         for (const card of visibleCards) {
             if (cancelled) break;
 
-            const delBtn = [...card.querySelectorAll('button, a')].find(b => b.innerText?.trim() === 'удалить');
-            if (delBtn) {
-                delBtn.click();
-                card.dataset.viewed = 'true';
-                card.style.opacity  = '0.4';
-                card.style.filter   = 'grayscale(60%)';
-                processed++;
+            const delBtn = [...card.querySelectorAll('button, a')]
+                .find(b => b.innerText?.trim().toLowerCase() === 'удалить');
 
-                const text = document.getElementById('mass-progress-text');
-                const bar  = document.getElementById('mass-progress-bar');
-                if (text) text.textContent = `${processed} / ${count}`;
-                if (bar)  bar.style.width  = `${(processed / count) * 100}%`;
+            if (!delBtn) { skipped++; continue; }
 
-                await new Promise(r => setTimeout(r, 500));
+            // Устанавливаем активную карточку чтобы autoFillPopup знал контекст
+            activeCard   = card;
+            popupFilled  = false;
+
+            delBtn.click();
+
+            // Ждём появления попапа (он может открыться не мгновенно)
+            const popup = await waitForPopup(2500);
+
+            if (popup) {
+                // Даём autoFillPopup заполнить textarea если включён
+                await new Promise(r => setTimeout(r, 400));
+
+                // Кликаем кнопку подтверждения (то же что Ctrl+Enter)
+                const submitBtn = popup.querySelector('.btn.is-filled.variant-danger');
+                if (submitBtn) {
+                    submitBtn.click();
+                    // Ждём закрытия попапа
+                    await waitForPopupClose(4000);
+                } else {
+                    // Нет кнопки подтверждения — закрываем попап и пропускаем
+                    popup.querySelector('.popup-close, [class*="popup-close"]')?.click();
+                    await waitForPopupClose(1500);
+                    skipped++;
+                    continue;
+                }
+            } else {
+                // Попап не открылся — возможно удаление прошло без попапа
+                await new Promise(r => setTimeout(r, 300));
             }
+
+            card.dataset.viewed = 'true';
+            card.dataset.banned = 'true'; // помечаем чтобы observer не делал grayscale повторно
+            card.style.opacity  = '0.4';
+            card.style.filter   = 'grayscale(60%)';
+            processed++;
+
+            document.getElementById('mass-progress-text')?.textContent &&
+                (document.getElementById('mass-progress-text').textContent = `${processed} / ${count}`);
+            const bar = document.getElementById('mass-progress-bar');
+            if (bar) bar.style.width = `${(processed / count) * 100}%`;
+
+            // Небольшая пауза между карточками чтобы не нагружать сервер
+            await new Promise(r => setTimeout(r, 200));
         }
+
+        updateMassButton?.();
 
         MU.setHTML(progress, `
             <div style="color:#2ecc71;font-size:14px;font-weight:600;margin-bottom:6px">✓ Готово</div>
-            <div style="color:#ccc;font-size:12px">Удалено ${MU.esc(processed)} из ${MU.esc(count)}${cancelled ? ' (остановлено)' : ''}</div>
+            <div style="color:#ccc;font-size:12px">
+                Удалено: ${MU.esc(processed)}${skipped ? ` · пропущено: ${MU.esc(skipped)}` : ''}${cancelled ? ' (остановлено)' : ''}
+            </div>
         `);
-        setTimeout(() => progress.remove(), 2500);
+        setTimeout(() => progress.remove(), 3000);
     }
 
     // ==================== ТАЙТЛ ====================
@@ -931,8 +999,38 @@ window.MUModeration = (function() {
         settings = await MU.getSettings();
 
         document.addEventListener('click', (e) => {
-            if (e.target.closest('.btn.is-filled.variant-danger') && activeCard) {
+            const isBanSubmit = !!e.target.closest('.btn.is-filled.variant-danger');
+
+            if (isBanSubmit && activeCard) {
                 activeCard.dataset.banned = 'true';
+            }
+
+            // Перехватываем пока попап ещё открыт → данные доступны
+            if (isBanSubmit) {
+                const popup  = document.querySelector('.popup-body')
+                            || document.querySelector('[class*="popup__body"]')
+                            || document.querySelector('.modal-body');
+                const select = popup?.querySelector('select.form-input__field')
+                            || popup?.querySelector('select');
+                const banReason = [...(select?.options || [])].find(o => o.selected)?.text?.trim() || '';
+
+                let commentText = '';
+                let cardReason  = '';
+                if (activeCard) {
+                    const data  = getCardData(activeCard);
+                    commentText = data.commentText;
+                    cardReason  = data.reason;
+                } else if (activeComment) {
+                    commentText = extractCommentText(activeComment);
+                }
+
+                if (commentText && commentText !== '—') {
+                    MU.emit('modAction', {
+                        action:      'ban',
+                        commentText,
+                        reason:      banReason || cardReason,
+                    });
+                }
             }
         }, true);
 
@@ -968,6 +1066,26 @@ window.MUModeration = (function() {
             if (complainBtn?.innerText?.trim() === 'жалоба') {
                 activeComment = complainBtn.closest('.comment');
                 popupFilled = false;
+            }
+        }, true);
+
+        // Трекаем клик по «Удалить» внутри карточки (без попапа)
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('a, button');
+            if (!btn) return;
+            if (btn.innerText?.trim().toLowerCase() !== 'удалить') return;
+
+            // Ищем ближайшую карточку
+            const card = btn.closest(CARD_SEL) || activeCard;
+            if (!card) return;
+
+            const data = getCardData(card);
+            if (data.commentText && data.commentText !== '—') {
+                MU.emit('modAction', {
+                    action:      'delete',
+                    commentText: data.commentText,
+                    reason:      data.reason,
+                });
             }
         }, true);
 

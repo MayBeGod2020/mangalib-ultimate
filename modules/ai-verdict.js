@@ -113,16 +113,33 @@ window.MUAiVerdict = (function () {
             keyHint: 'console.mistral.ai',
             keyPlaceholder: '...',
         },
+        groq: {
+            name:    'Groq (бесплатный фолбэк)',
+            url:     'https://api.groq.com/openai/v1/chat/completions',
+            model:   'llama-3.3-70b-versatile',
+            format:  'openai',
+            jsonMode: true,
+            keyHint: 'console.groq.com/keys',
+            keyPlaceholder: 'gsk_...',
+        },
     };
 
     // Универсальный вызов AI — возвращает текст ответа
-    async function callAI(systemPrompt, userMessage, signal, maxTokens = 300) {
-        const ai       = settings?.ai || {};
-        const apiKey   = ai.apiKey || ai.deepseekKey || ''; // миграция старого ключа
-        const provKey  = ai.provider || 'deepseek';
-        const provider = PROVIDERS[provKey] || PROVIDERS.deepseek;
+    // useGroq=true: принудительно использовать Groq (фолбэк при 402/429)
+    async function callAI(systemPrompt, userMessage, signal, maxTokens = 300, useGroq = false) {
+        const ai = settings?.ai || {};
 
-        if (!apiKey) throw new Error('API ключ не задан');
+        let apiKey, provider;
+        if (useGroq) {
+            apiKey   = ai.groqKey || '';
+            provider = PROVIDERS.groq;
+            if (!apiKey) throw new Error('Groq API ключ не задан');
+        } else {
+            apiKey   = ai.apiKey || ai.deepseekKey || ''; // миграция старого ключа
+            const provKey = ai.provider || 'deepseek';
+            provider = PROVIDERS[provKey] || PROVIDERS.deepseek;
+            if (!apiKey) throw new Error('API ключ не задан');
+        }
 
         // Для провайдеров без jsonMode добавляем напоминание в промпт
         const sysPrompt = provider.jsonMode
@@ -180,9 +197,18 @@ window.MUAiVerdict = (function () {
 
         const resp = await fetch(url, options);
         if (!resp.ok) {
+            // Автофолбэк на Groq при исчерпании лимита/баланса
+            if (!useGroq && (resp.status === 402 || resp.status === 429) && ai.groqKey) {
+                MU.log('AiVerdict', `HTTP ${resp.status} — переключаемся на Groq`);
+                MU.emit('aiLimitReached');
+                return callAI(systemPrompt, userMessage, signal, maxTokens, true);
+            }
             const err = await resp.json().catch(() => ({}));
             throw new Error(err?.error?.message || `HTTP ${resp.status}`);
         }
+
+        // Успешный запрос к основному провайдеру — сбрасываем бейдж
+        if (!useGroq) MU.emit('aiLimitCleared');
 
         const data = await resp.json();
 
@@ -364,7 +390,14 @@ window.MUAiVerdict = (function () {
             const controller = new AbortController();
             currentRequest   = controller;
 
-            const raw    = await callAI(systemPrompt, userMessage, controller.signal, 250);
+            // Few-shot: добавляем релевантные примеры в системный промпт
+            let enhancedPrompt = systemPrompt;
+            if (window.MUExamples) {
+                const fewShot = await window.MUExamples.buildFewShot(reason || '').catch(() => '');
+                if (fewShot) enhancedPrompt += fewShot;
+            }
+
+            const raw    = await callAI(enhancedPrompt, userMessage, controller.signal, 250);
             if (!raw)    throw new Error('Пустой ответ от модели');
             const parsed = parseJSON(raw);
 
@@ -373,6 +406,9 @@ window.MUAiVerdict = (function () {
             if (isClassifyMode && parsed.reason_key && popup && document.body.contains(popup)) {
                 window.MUModeration?.selectReason(popup, parsed.reason_key);
             }
+
+            // Автопополнение базы примеров
+            window.MUExamples?.autoSave(commentText, parsed, parsed.reason_key || reason);
         } catch (err) {
             if (err.name === 'AbortError') return;
             showPanel('error', { message: err.message });
@@ -535,6 +571,40 @@ window.MUAiVerdict = (function () {
         );
     }
 
+    // ==================== БЕЙДЖ «API лимит» ====================
+
+    const LIMIT_BADGE_ID = 'mu-ai-limit-badge';
+
+    function showLimitBadge() {
+        if (document.getElementById(LIMIT_BADGE_ID)) return;
+        const badge = document.createElement('div');
+        badge.id = LIMIT_BADGE_ID;
+        badge.style.cssText = `
+            position:fixed;top:52px;right:16px;z-index:99999;
+            padding:6px 10px 6px 12px;border-radius:20px;
+            background:rgba(231,76,60,0.12);border:1px solid #e74c3c;
+            color:#e74c3c;font-size:11px;font-weight:600;
+            font-family:var(--reader-font-family,-apple-system,sans-serif);
+            box-shadow:0 4px 12px rgba(0,0,0,0.15);
+            display:flex;align-items:center;gap:6px;
+            animation:mu-ai-slide-in 0.25s ease;
+        `;
+        const text = document.createElement('span');
+        text.textContent = '⚠️ API лимит — переключено на Groq';
+        badge.appendChild(text);
+        const close = document.createElement('button');
+        close.textContent = '✕';
+        close.style.cssText = `background:none;border:none;color:#e74c3c;cursor:pointer;
+            font-size:14px;padding:0;line-height:1;flex-shrink:0;`;
+        close.addEventListener('click', hideLimitBadge);
+        badge.appendChild(close);
+        document.body.appendChild(badge);
+    }
+
+    function hideLimitBadge() {
+        document.getElementById(LIMIT_BADGE_ID)?.remove();
+    }
+
     // ==================== КНОПКА СКАНИРОВАНИЯ ====================
 
     const SCAN_BTN_ID   = 'mu-batch-scan-btn';
@@ -623,6 +693,9 @@ window.MUAiVerdict = (function () {
             }
         });
 
+        MU.on('aiLimitReached', showLimitBadge);
+        MU.on('aiLimitCleared', hideLimitBadge);
+
         // Инжектируем кнопку когда страница готова
         setTimeout(injectScanButton, 2000);
         MU.on('urlChanged', () => {
@@ -634,6 +707,7 @@ window.MUAiVerdict = (function () {
         MU.log('AiVerdict', 'Модуль запущен');
     }
 
-    return { init, onPopupOpen, onPopupClose };
+    // Экспортируем для использования в других модулях (forum-analysis и др.)
+    return { init, onPopupOpen, onPopupClose, callAI, parseJSON };
 
 })();

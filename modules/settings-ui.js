@@ -601,12 +601,49 @@ window.MUSettingsUI = (function () {
                 ${currentKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Ключ сохранён</div>` : ''}
             </div>
 
+            <div class="mu-section-title">Правила форума</div>
+            <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                <div class="mu-setting-label">Правила форума для ИИ</div>
+                <div class="mu-setting-desc" style="margin-bottom:4px;">
+                    ИИ будет руководствоваться этими правилами при анализе тем. Оставь пустым — используются правила по умолчанию.
+                </div>
+                <textarea id="mu-ai-forum-rules" class="mu-input" rows="5"
+                    placeholder="1. Бессмысленная тема — ...&#10;2. Дубликат — ...&#10;3. Некорректный заголовок — ..."
+                    style="resize:vertical;font-size:11px;line-height:1.5;"
+                >${MU.esc(ai.forumRules || '')}</textarea>
+                <button id="mu-ai-forum-rules-save" class="mu-btn"
+                    style="padding:6px 12px;font-size:11px;align-self:flex-end;">
+                    Сохранить правила
+                </button>
+            </div>
+
+            <div class="mu-section-title">Бесплатный фолбэк</div>
+            <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                <div class="mu-setting-label">Groq API ключ</div>
+                <div class="mu-setting-desc" style="margin-bottom:4px;">
+                    При ошибке 402/429 запрос автоматически повторится через Groq.
+                    Получить на <a href="https://console.groq.com/keys" target="_blank"
+                        style="color:var(--mu-accent, #f39c12);">console.groq.com/keys</a>
+                </div>
+                <div style="display:flex;gap:6px;width:100%;">
+                    <input type="password" id="mu-ai-groq-key-input" class="mu-input"
+                        placeholder="gsk_..."
+                        value="${MU.esc(ai.groqKey || '')}"
+                        style="flex:1;font-size:11px;">
+                    <button id="mu-ai-groq-key-save" class="mu-btn"
+                        style="padding:6px 12px;font-size:11px;white-space:nowrap;">
+                        Сохранить
+                    </button>
+                </div>
+                ${ai.groqKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Groq ключ сохранён</div>` : ''}
+            </div>
+
             <div style="margin-top:8px;padding:10px;
                 background:var(--background-fill-4,rgba(116,116,128,.05));
                 border:1px solid var(--border-base,#e5e5e5);
                 border-radius:var(--radius-section-block,8px);
                 font-size:10px;color:var(--text-secondary,#8a8a8e);line-height:1.6;">
-                🤖 Ключ хранится локально в браузере и отправляется только выбранному провайдеру.
+                🤖 Ключи хранятся локально в браузере и отправляются только выбранным провайдерам.
             </div>
         `;
     }
@@ -718,6 +755,28 @@ window.MUSettingsUI = (function () {
                 await MU.updateSetting('ai', 'apiKey', val);
                 // Очищаем старый deepseekKey если мигрировали
                 if (settings.ai?.deepseekKey) await MU.updateSetting('ai', 'deepseekKey', '');
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        }
+
+        // Forum rules save
+        const forumRulesSave = document.getElementById('mu-ai-forum-rules-save');
+        if (forumRulesSave) {
+            forumRulesSave.addEventListener('click', async () => {
+                const val = document.getElementById('mu-ai-forum-rules')?.value?.trim() || '';
+                await MU.updateSetting('ai', 'forumRules', val);
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        }
+
+        // Groq key save
+        const groqKeySave = document.getElementById('mu-ai-groq-key-save');
+        if (groqKeySave) {
+            groqKeySave.addEventListener('click', async () => {
+                const val = document.getElementById('mu-ai-groq-key-input')?.value?.trim() || '';
+                await MU.updateSetting('ai', 'groqKey', val);
                 settings = await MU.getSettings();
                 renderTab(activeTab);
             });

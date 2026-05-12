@@ -88,6 +88,8 @@
         await window.MUReader.init().catch(e => MU.log('Main', 'Reader err:', e));
         await window.MUModeration.init().catch(e => MU.log('Main', 'Moderation err:', e));
         await window.MUAiVerdict.init().catch(e => MU.log('Main', 'AIVerdict err:', e));
+        await window.MUExamples.init().catch(e => MU.log('Main', 'Examples err:', e));
+        await window.MUForumAnalysis.init().catch(e => MU.log('Main', 'ForumAnalysis err:', e));
 
         const settingsModule = await window.MUSettingsUI.init()
             .catch(e => { MU.log('Main', 'SettingsUI err:', e); return null; });
