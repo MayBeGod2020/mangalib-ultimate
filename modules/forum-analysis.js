@@ -303,6 +303,10 @@ window.MUForumAnalysis = (function () {
         if (!settings?.ai?.enabled) return;
         if (menuList.querySelector(`#${MENU_ITEM_ID}`)) return;
 
+        // Это меню форумной темы только если внутри есть ссылка на /forum/discussion/
+        // (меню комментария, гамбургер и другие такой ссылки не имеют)
+        if (!menuList.querySelector('a[href*="/forum/discussion/"]')) return;
+
         const item = document.createElement('div');
         item.id = MENU_ITEM_ID;
         item.className = 'menu-item';
