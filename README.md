@@ -23,7 +23,9 @@
 
 ### Firefox Add-ons
 
-*(ссылка появится после публикации)*
+[![Firefox](https://img.shields.io/badge/Firefox-Add--on-FF7139?logo=firefox)](https://addons.mozilla.org/ru/firefox/addon/mangalib-ultimate-helper/)
+
+[🦊 Установить для Firefox](https://addons.mozilla.org/ru/firefox/addon/mangalib-ultimate-helper/)
 
 ### Chrome Web Store / Opera Addons
 
