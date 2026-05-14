@@ -417,38 +417,23 @@ window.MUAiVerdict = (function () {
                     })
                 });
             } else if (isTelegram) {
-                // Telegram: извлекаем chat_id из URL, отправляем POST+JSON+HTML
-                // (надёжнее чем URL-параметры с Markdown — нет проблем с экранированием)
-                const escHtml = t => String(t)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;');
+                // Telegram: отправляем GET с text в URL — аналогично браузерному тесту
+                // POST+JSON+HTML отвергается при ошибках парсинга разметки
                 const text = [
-                    `🚫 <b>Нарушение на ${escHtml(siteName)}</b>`,
-                    `<b>Правило:</b> ${escHtml(data.rule || '—')}`,
-                    `<b>Причина:</b> ${escHtml(data.reason || '—')}`,
-                    `<b>Уверенность:</b> ${escHtml(data.confidence || '—')}`,
+                    `🚫 Нарушение на ${siteName}`,
+                    `Правило: ${data.rule || '—'}`,
+                    `Причина: ${data.reason || '—'}`,
+                    `Уверенность: ${data.confidence || '—'}`,
                     '',
-                    `<code>${escHtml(commentPreview)}</code>`,
+                    commentPreview,
                     '',
-                    `<a href="${escHtml(pageUrl)}">Открыть страницу</a>`,
+                    pageUrl,
                 ].join('\n');
-
-                try {
-                    const u      = new URL(webhookUrl);
-                    const chatId = u.searchParams.get('chat_id');
-                    const base   = `${u.origin}${u.pathname}`;
-                    await MU.bgFetch(base, {
-                        method:  'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
-                    });
-                } catch {
-                    // Фолбэк без форматирования
-                    const plain = `🚫 Нарушение на ${siteName}\nПравило: ${data.rule || '—'}\nПричина: ${data.reason || '—'}\n\n${commentPreview}`;
-                    const sep   = webhookUrl.includes('?') ? '&' : '?';
-                    await MU.bgFetch(`${webhookUrl}${sep}text=${encodeURIComponent(plain)}`, { method: 'POST' });
-                }
+                const sep = webhookUrl.includes('?') ? '&' : '?';
+                await MU.bgFetch(
+                    `${webhookUrl}${sep}text=${encodeURIComponent(text)}`,
+                    { method: 'GET' }
+                );
             }
         } catch (e) {
             MU.log('AiVerdict', 'Webhook error:', e);

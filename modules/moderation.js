@@ -211,17 +211,29 @@ window.MUModeration = (function() {
     const CARD_SEL   = '.aek_ael, .abz_ab0, [class*="abz_ab"]';
     const HEADER_SEL = '.aek_ag, .abz_ah, [class*="abz_ah"]';
 
-    // Причина — первый span в заголовке карточки
+    // Возвращает карточки жалоб: сначала по CSS-селектору, при неудаче — структурно
+    function getAllCards() {
+        const bySel = [...document.querySelectorAll(CARD_SEL)];
+        if (bySel.length > 0) return bySel;
+        // Фолбэк: прямые потомки .reports-container, у которых есть .comment
+        const container = document.querySelector('.reports-container');
+        if (!container) return [];
+        return [...container.children].filter(el =>
+            el.nodeType === 1 && el.querySelector('.comment, .comment__content')
+        );
+    }
+
+    // Причина — span в заголовке карточки, совпадающий с ключом REASON_MAP
     function getCardReason(card) {
         // Заголовок — первый дочерний div карточки (до .comment)
         const header = card.querySelector(HEADER_SEL)
                     || card.firstElementChild;
         if (header) {
-            // Берём текст первого span-а в заголовке
-            const span = header.querySelector('span');
-            if (span) {
+            // Проверяем все spans: берём тот, текст которого есть в REASON_MAP
+            // (первый span может быть счётчиком "1", а не причиной)
+            for (const span of header.querySelectorAll('span')) {
                 const t = (span.textContent || '').trim().toLowerCase();
-                if (t) return t;
+                if (t && REASON_MAP[t] !== undefined) return t;
             }
         }
 
@@ -317,7 +329,7 @@ window.MUModeration = (function() {
 
     function colorizeCards() {
         if (!settings?.moderation?.colorizeCards) return;
-        document.querySelectorAll(CARD_SEL).forEach(card => {
+        getAllCards().forEach(card => {
             // Бейдж банов — всегда, независимо от colorize
             injectBanBadge(card);
 
@@ -352,7 +364,7 @@ window.MUModeration = (function() {
             || (location.href.includes('/moderation') && !!document.querySelector('.reports-container'));
         if (!onModPage) return;
 
-        const cards = document.querySelectorAll(CARD_SEL);
+        const cards = getAllCards();
         const reasons = new Set();
         cards.forEach(card => {
             const text = getCardReason(card);
@@ -383,7 +395,7 @@ window.MUModeration = (function() {
         allBtn.style.cssText = `padding:3px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:inherit;cursor:pointer;font-size:11px;font-weight:600;`;
         allBtn.addEventListener('click', () => {
             activeFilter = null;
-            document.querySelectorAll(CARD_SEL).forEach(c => c.style.display='');
+            getAllCards().forEach(c => c.style.display='');
             panel.querySelectorAll('button[data-reason]').forEach(b => b.style.background='transparent');
             updateMassButton();
         });
@@ -398,10 +410,10 @@ window.MUModeration = (function() {
             btn.addEventListener('click', () => {
                 if (activeFilter === reason) {
                     activeFilter = null;
-                    document.querySelectorAll(CARD_SEL).forEach(c => c.style.display='');
+                    getAllCards().forEach(c => c.style.display='');
                 } else {
                     activeFilter = reason;
-                    document.querySelectorAll(CARD_SEL).forEach(card => {
+                    getAllCards().forEach(card => {
                         card.style.display = getCardReason(card) === reason ? '' : 'none';
                     });
                 }
@@ -427,7 +439,7 @@ window.MUModeration = (function() {
         panel.appendChild(massBtn);
 
         updateMassButton = function() {
-            const visibleCards = [...document.querySelectorAll(CARD_SEL)].filter(c =>
+            const visibleCards = getAllCards().filter(c =>
                 c.style.display !== 'none' && !c.dataset.viewed
             );
             const count = visibleCards.length;
@@ -488,7 +500,7 @@ window.MUModeration = (function() {
     async function massDeleteVisible() {
         if (_massDeleteRunning) return;
 
-        const visibleCards = [...document.querySelectorAll(CARD_SEL)].filter(c =>
+        const visibleCards = getAllCards().filter(c =>
             c.style.display !== 'none' && !c.dataset.viewed
         );
         const count = visibleCards.length;
