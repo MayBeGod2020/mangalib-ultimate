@@ -190,42 +190,221 @@ window.MUDashboard = (function() {
         const style = document.createElement('style');
         style.id = 'mu-dashboard-styles';
         style.textContent = `
+            /* ── Кнопка-тогглер ── */
             #mu-dashboard-toggle {
-                background:#1a1a2e;border:1px solid #9b59b6;border-radius:20px;
-                padding:5px 12px;color:#9b59b6;cursor:pointer;display:flex;
-                align-items:center;gap:6px;font-size:12px;font-weight:600;
-                box-shadow:0 2px 8px rgba(155,89,182,0.3);transition:all 0.2s;
-                white-space:nowrap;font-family:-apple-system,sans-serif;
+                background: var(--background-elevated-1, #fff);
+                border: 1px solid var(--mu-accent, #f39c12);
+                border-radius: 20px;
+                padding: 4px 12px;
+                color: var(--mu-accent, #f39c12);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                box-shadow: 0 2px 8px color-mix(in srgb, var(--mu-accent,#f39c12) 20%, transparent);
+                transition: all 0.2s;
+                white-space: nowrap;
+                font-family: var(--reader-font-family, -apple-system, sans-serif);
             }
-            #mu-dashboard-toggle:hover { background:rgba(155,89,182,0.15); }
+            #mu-dashboard-toggle:hover {
+                background: color-mix(in srgb, var(--mu-accent,#f39c12) 10%, transparent);
+            }
+
+            /* ── Счётчик онлайн ── */
+            #mu-online-count {
+                background: var(--green, #2ecc71);
+                color: #fff;
+                border-radius: 10px;
+                padding: 0 6px;
+                font-size: 10px;
+                font-weight: 700;
+                min-width: 16px;
+                text-align: center;
+            }
+
+            /* ── Панель ── */
             #mu-dashboard-panel {
-                display:none;position:fixed;top:52px;right:16px;width:340px;
-                background:#0f0f1a;border:1px solid #2a2a3e;border-radius:12px;
-                box-shadow:0 8px 24px rgba(0,0,0,0.6);overflow:hidden;
-                z-index:99998;font-family:-apple-system,sans-serif;font-size:12px;
+                display: none;
+                position: fixed;
+                top: 52px;
+                right: 16px;
+                width: 340px;
+                max-height: 82vh;
+                background: var(--background-elevated-1, #fff);
+                border: 1px solid var(--border-base, #e5e5e5);
+                border-radius: var(--radius-section-block, 10px);
+                box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+                overflow: hidden;
+                z-index: 99998;
+                font-family: var(--reader-font-family, -apple-system, sans-serif);
+                font-size: 13px;
+                flex-direction: column;
             }
-            #mu-dashboard-panel.open { display:block; }
-            .mu-dash-section { padding:10px 14px;border-bottom:1px solid #1e1e2e; }
-            .mu-dash-section:last-child { border-bottom:none; }
-            .mu-dash-label { font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#555;margin-bottom:6px;font-weight:600; }
-            .mu-dash-btn { padding:3px 10px;border-radius:6px;border:1px solid currentColor;background:transparent;cursor:pointer;font-size:11px;color:inherit; }
-            .mu-dash-btn:hover { background:rgba(255,255,255,0.05); }
-            .mu-watch-tag { display:inline-flex;align-items:center;gap:4px;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.4);color:#e74c3c;border-radius:10px;padding:2px 8px;font-size:11px;cursor:pointer;margin:2px; }
-            .mu-watch-tag:hover { background:rgba(231,76,60,0.3); }
-            .mu-mod-group { margin-bottom:8px; }
-            .mu-mod-group-name { font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;font-weight:600; }
-            .mu-mod-item { display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px; }
-            .mu-mod-dot-online  { width:6px;height:6px;background:#2ecc71;border-radius:50%;flex-shrink:0; }
-            .mu-mod-dot-recent  { width:6px;height:6px;background:#f39c12;border-radius:50%;flex-shrink:0; }
-            .mu-mod-dot-offline { width:6px;height:6px;background:#333;border-radius:50%;flex-shrink:0; }
-            .mu-mod-name-online  { color:#e0e0e0; }
-            .mu-mod-name-recent  { color:#888; }
-            .mu-mod-name-offline { color:#444; }
-            .mu-mod-name-me { color:#9b59b6;font-weight:600; }
-            .mu-dash-scrollable { max-height:280px;overflow-y:auto; }
-            .mu-dash-scrollable::-webkit-scrollbar { width:4px; }
-            .mu-dash-scrollable::-webkit-scrollbar-track { background:#0f0f1a; }
-            .mu-dash-scrollable::-webkit-scrollbar-thumb { background:#333;border-radius:2px; }
+            #mu-dashboard-panel.open { display: flex !important; }
+
+            /* ── Шапка ── */
+            .mu-dash-header {
+                padding: 12px 16px;
+                background: var(--background-elevated-2, #f7f7f8);
+                border-bottom: 1px solid var(--border-base, #e5e5e5);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            .mu-dash-title {
+                color: var(--mu-accent, #f39c12);
+                font-weight: 700;
+                font-size: 14px;
+            }
+            .mu-dash-close {
+                background: none;
+                border: none;
+                color: var(--text-secondary, #8a8a8e);
+                cursor: pointer;
+                font-size: 18px;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: background 0.15s;
+            }
+            .mu-dash-close:hover {
+                background: var(--background-fill-3, rgba(118,118,128,.12));
+                color: var(--text-primary, #212529);
+            }
+
+            /* ── Прокручиваемое тело ── */
+            .mu-dash-body {
+                flex: 1;
+                overflow-y: auto;
+            }
+            .mu-dash-body::-webkit-scrollbar { width: 4px; }
+            .mu-dash-body::-webkit-scrollbar-track { background: var(--background, #f2f2f3); }
+            .mu-dash-body::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb, #c1c1c1); border-radius: 2px; }
+
+            /* ── Секции ── */
+            .mu-dash-section {
+                padding: 10px 16px;
+                border-bottom: 1px solid var(--border-light, #ebebeb);
+            }
+            .mu-dash-section:last-child { border-bottom: none; }
+
+            .mu-dash-label {
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                color: var(--mu-accent, #f39c12);
+                margin-bottom: 8px;
+                font-weight: 700;
+            }
+
+            /* ── Кнопки ── */
+            .mu-dash-btn {
+                background: var(--background-fill-4, rgba(116,116,128,.05));
+                border: 1px solid var(--mu-accent, #f39c12);
+                color: var(--mu-accent, #f39c12);
+                padding: 5px 12px;
+                border-radius: var(--radius-section-block, 8px);
+                cursor: pointer;
+                font-size: 12px;
+                font-family: inherit;
+                transition: background 0.15s;
+            }
+            .mu-dash-btn:hover {
+                background: color-mix(in srgb, var(--mu-accent,#f39c12) 10%, transparent);
+            }
+            .mu-dash-btn-danger {
+                border-color: var(--red, #e74c3c);
+                color: var(--red, #e74c3c);
+            }
+            .mu-dash-btn-danger:hover { background: rgba(231,76,60,0.08); }
+
+            /* ── Watchlist теги ── */
+            .mu-watch-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                background: rgba(231,76,60,0.08);
+                border: 1px solid rgba(231,76,60,0.35);
+                color: var(--red, #e74c3c);
+                border-radius: 20px;
+                padding: 3px 10px;
+                font-size: 11px;
+                cursor: pointer;
+                margin: 2px;
+                transition: background 0.15s;
+            }
+            .mu-watch-tag:hover { background: rgba(231,76,60,0.18); }
+
+            /* ── Список модераторов ── */
+            .mu-mod-group { margin-bottom: 10px; }
+            .mu-mod-group:last-child { margin-bottom: 0; }
+            .mu-mod-group-name {
+                font-size: 10px;
+                color: var(--text-secondary, #8a8a8e);
+                text-transform: uppercase;
+                letter-spacing: 0.6px;
+                margin-bottom: 5px;
+                font-weight: 600;
+            }
+            .mu-mod-item {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                padding: 3px 0;
+                font-size: 12px;
+            }
+            .mu-mod-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                flex-shrink: 0;
+            }
+            .mu-mod-dot-online  { background: var(--green, #2ecc71); }
+            .mu-mod-dot-recent  { background: var(--yellow, #f39c12); }
+            .mu-mod-dot-offline { background: var(--border-base, #ddd); }
+
+            .mu-mod-name { font-size: 12px; }
+            .mu-mod-name-online  { color: var(--text-primary, #212529); }
+            .mu-mod-name-recent  { color: var(--text-secondary, #8a8a8e); }
+            .mu-mod-name-offline { color: var(--text-secondary, #8a8a8e); opacity: 0.5; }
+            .mu-mod-name-me      { color: var(--mu-accent, #f39c12); font-weight: 600; }
+
+            .mu-mod-time {
+                font-size: 10px;
+                color: var(--text-secondary, #8a8a8e);
+                margin-left: auto;
+                opacity: 0.7;
+            }
+
+            /* ── Объявление ── */
+            .mu-dash-announce-box {
+                background: rgba(231,76,60,0.06);
+                border: 1px solid rgba(231,76,60,0.25);
+                border-radius: var(--radius-section-block, 8px);
+                padding: 8px 10px;
+                font-size: 12px;
+                color: var(--text-primary, #212529);
+                line-height: 1.5;
+                margin-bottom: 6px;
+            }
+
+            /* ── Метка сайта ── */
+            .mu-dash-site-badge {
+                background: color-mix(in srgb, var(--mu-accent,#f39c12) 12%, transparent);
+                border: 1px solid color-mix(in srgb, var(--mu-accent,#f39c12) 30%, transparent);
+                border-radius: 10px;
+                padding: 1px 7px;
+                font-size: 10px;
+                color: var(--mu-accent, #f39c12);
+                font-weight: 600;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -237,8 +416,8 @@ window.MUDashboard = (function() {
         btn.id = 'mu-dashboard-toggle';
         MU.setHTML(btn, `
             📊 Панель
-            <span id="mu-online-count" style="background:#2ecc71;color:#000;border-radius:10px;padding:0 5px;font-size:10px;font-weight:700;">—</span>
-            <span style="opacity:0.5;font-size:10px;font-weight:400">${MU.esc(SITE_NAME)}</span>
+            <span id="mu-online-count">—</span>
+            <span class="mu-dash-site-badge">${MU.esc(SITE_NAME)}</span>
         `);
         btn.addEventListener('click', toggleDashboard);
         return btn;
@@ -250,44 +429,55 @@ window.MUDashboard = (function() {
         const panel = document.createElement('div');
         panel.id = 'mu-dashboard-panel';
         MU.setHTML(panel, `
-            <div class="mu-dash-section" style="background:#12122a">
-                <div style="display:flex;align-items:center;justify-content:space-between">
-                    <span style="color:#9b59b6;font-weight:700;font-size:13px">📊 Панель управления</span>
-                    <span id="mu-dash-updated" style="color:#333;font-size:10px"></span>
-                </div>
-                <div style="color:#555;font-size:10px;margin-top:2px;display:flex;align-items:center;gap:8px">
-                    <span>Вы: <span style="color:#9b59b6" id="mu-dash-me-name">${MU.esc(ME.username)}</span></span>
-                    <span style="background:rgba(155,89,182,0.15);border:1px solid rgba(155,89,182,0.3);border-radius:8px;padding:1px 6px;color:#9b59b6;font-size:10px">${MU.esc(SITE_NAME)}</span>
-                </div>
-            </div>
-            <div id="mu-announcement-section" class="mu-dash-section" style="display:none">
-                <div class="mu-dash-label" style="color:#e74c3c">📢 Объявление</div>
-                <div id="mu-announcement-text" style="color:#fff;line-height:1.5;font-size:12px"></div>
-                <button class="mu-dash-btn" id="mu-clear-announce" style="color:#e74c3c;margin-top:6px;font-size:10px">Убрать</button>
-            </div>
-            <div class="mu-dash-section">
-                <div class="mu-dash-label">
-                    👥 Модераторы
-                    <span style="color:#555;font-weight:400;font-size:10px;margin-left:4px">🟢&lt;15м 🟡&lt;2ч ⚫давно</span>
-                </div>
-                <div class="mu-dash-scrollable">
-                    <div id="mu-moderators-list">
-                        <div style="color:#444;font-size:11px">Загрузка...</div>
+            <div class="mu-dash-header">
+                <div>
+                    <div class="mu-dash-title">📊 Панель управления</div>
+                    <div style="font-size:11px;color:var(--text-secondary,#8a8a8e);margin-top:2px;display:flex;align-items:center;gap:6px">
+                        <span>Вы: <b style="color:var(--mu-accent,#f39c12)" id="mu-dash-me-name">${MU.esc(ME.username)}</b></span>
+                        <span class="mu-dash-site-badge">${MU.esc(SITE_NAME)}</span>
                     </div>
                 </div>
-            </div>
-            <div class="mu-dash-section">
-                <div class="mu-dash-label">⚠️ Watchlist</div>
-                <div id="mu-watchlist-items" style="margin-bottom:6px;min-height:20px">
-                    <span style="color:#444">пусто</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span id="mu-dash-updated" style="font-size:10px;color:var(--text-secondary,#8a8a8e);opacity:0.6"></span>
+                    <button class="mu-dash-close" id="mu-dash-close-btn">✕</button>
                 </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <button class="mu-dash-btn" id="mu-add-watch" style="color:var(--mu-accent, #f39c12)">+ Добавить</button>
-                    <button class="mu-dash-btn" id="mu-announce-btn" style="color:#9b59b6">📢 Объявление</button>
+            </div>
+
+            <div class="mu-dash-body">
+                <div id="mu-announcement-section" class="mu-dash-section" style="display:none">
+                    <div class="mu-dash-label" style="color:var(--red,#e74c3c)">📢 Объявление</div>
+                    <div class="mu-dash-announce-box">
+                        <div id="mu-announcement-text"></div>
+                    </div>
+                    <button class="mu-dash-btn mu-dash-btn-danger" id="mu-clear-announce">Убрать</button>
+                </div>
+
+                <div class="mu-dash-section">
+                    <div class="mu-dash-label" style="display:flex;align-items:center;justify-content:space-between">
+                        <span>👥 Модераторы</span>
+                        <span style="color:var(--text-secondary,#8a8a8e);font-size:10px;text-transform:none;letter-spacing:0;font-weight:400">🟢&lt;15м 🟡&lt;2ч ⚫давно</span>
+                    </div>
+                    <div id="mu-moderators-list">
+                        <div style="color:var(--text-secondary,#8a8a8e);font-size:12px">Загрузка...</div>
+                    </div>
+                </div>
+
+                <div class="mu-dash-section">
+                    <div class="mu-dash-label">⚠️ Watchlist</div>
+                    <div id="mu-watchlist-items" style="margin-bottom:8px;min-height:20px">
+                        <span style="color:var(--text-secondary,#8a8a8e);font-size:12px">пусто</span>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button class="mu-dash-btn" id="mu-add-watch">+ Добавить</button>
+                        <button class="mu-dash-btn" id="mu-announce-btn">📢 Объявление</button>
+                    </div>
                 </div>
             </div>
         `);
         document.body.appendChild(panel);
+
+        // Кнопка закрытия
+        document.getElementById('mu-dash-close-btn').addEventListener('click', closeDashboard);
 
         // Закрытие по клику вне
         document.addEventListener('click', (e) => {
@@ -383,9 +573,9 @@ window.MUDashboard = (function() {
                     <div class="mu-mod-item" data-mod-id="${mod.id}">
                         <span class="mu-mod-dot mu-mod-dot-offline"></span>
                         <span class="mu-mod-name mu-mod-name-offline">
-                            ${MU.esc(mod.username)}${mod.id === ME.id ? ' <span style="color:#555;font-size:10px">(вы)</span>' : ''}
+                            ${MU.esc(mod.username)}${mod.id === ME.id ? ' <span style="color:var(--text-secondary,#8a8a8e);font-size:10px">(вы)</span>' : ''}
                         </span>
-                        <span class="mu-mod-time" style="color:#444;font-size:10px;margin-left:auto"></span>
+                        <span class="mu-mod-time"></span>
                     </div>
                 `).join('');
                 return `
@@ -421,7 +611,10 @@ window.MUDashboard = (function() {
             });
 
             const groupCountEl = groupEl.querySelector('.mu-group-online-count');
-            if (groupCountEl) groupCountEl.textContent = onlineInGroup > 0 ? `(${onlineInGroup} онлайн)` : '';
+            if (groupCountEl) {
+                groupCountEl.textContent = onlineInGroup > 0 ? ` (${onlineInGroup})` : '';
+                groupCountEl.style.color = 'var(--green, #2ecc71)';
+            }
         });
     }
 
@@ -433,7 +626,7 @@ window.MUDashboard = (function() {
 
         if (announcement?.text) {
             annSection.style.display = 'block';
-            MU.setHTML(annText, `<b style="color:#e74c3c">${MU.esc(announcement.author)}:</b> ${MU.esc(announcement.text)}`);
+            MU.setHTML(annText, `<b style="color:var(--red,#e74c3c)">${MU.esc(announcement.author)}:</b> ${MU.esc(announcement.text)}`);
         } else {
             annSection.style.display = 'none';
         }
@@ -459,7 +652,7 @@ window.MUDashboard = (function() {
                 });
             });
         } else {
-            watchEl.innerHTML = '<span style="color:#444">пусто</span>';
+            watchEl.innerHTML = '<span style="color:var(--text-secondary,#8a8a8e);font-size:12px">пусто</span>';
         }
 
         // Применяем к карточкам только если изменились
