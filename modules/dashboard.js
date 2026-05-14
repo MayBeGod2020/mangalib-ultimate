@@ -9,6 +9,19 @@ window.MUDashboard = (function() {
     const EXCLUDED_ROLES = ['eks-moderator', 'on_vacation'];
     const MODERATORS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
 
+    // Текущий сайт — все данные хранятся с его префиксом
+    const SITE      = MU.getCurrentSite(); // { siteId, name, endpoint }
+    const SITE_KEY  = SITE.siteId;         // '1' для MangaLib, '4' для HentaiLib, …
+    const SITE_NAME = SITE.name;           // 'MangaLib', 'HentaiLib', …
+
+    // Firebase-пути — site-specific
+    const DB_WATCHLIST    = `sites/${SITE_KEY}/watchlist`;
+    const DB_ANNOUNCEMENT = `sites/${SITE_KEY}/announcement`;
+
+    // Ключи chrome.storage.local — site-specific
+    const CACHE_MODS   = `moderators_list_${SITE_KEY}`;
+    const CACHE_ONLINE = `online_statuses_${SITE_KEY}`;
+
     // ==================== СОСТОЯНИЕ ====================
 
     let settings = null;
@@ -45,7 +58,7 @@ window.MUDashboard = (function() {
 
     async function fetchAllModerators() {
         // Сначала проверяем кэш в chrome.storage.local
-        const cached = await MU.cacheGet('moderators_list');
+        const cached = await MU.cacheGet(CACHE_MODS);
         if (cached && cached.list && Date.now() - cached.updatedAt < MODERATORS_CACHE_TTL) {
             MU.log('Dashboard', 'Модераторы из локального кэша:', cached.list.length);
             return cached.list;
@@ -70,7 +83,7 @@ window.MUDashboard = (function() {
                 result.push({ id: String(user.id), username: user.username, group });
             });
 
-            await MU.cacheSet('moderators_list', { list: result, updatedAt: Date.now() });
+            await MU.cacheSet(CACHE_MODS, { list: result, updatedAt: Date.now() });
             MU.log('Dashboard', 'Загружено модераторов:', result.length);
             return result;
         } catch (e) {
@@ -88,7 +101,7 @@ window.MUDashboard = (function() {
         }
 
         // Загружаем кэш с диска
-        const diskCache = await MU.cacheGet('online_statuses');
+        const diskCache = await MU.cacheGet(CACHE_ONLINE);
         if (diskCache && Date.now() - diskCache.timestamp < intervalMs) {
             onlineCache     = diskCache.data;
             onlineCacheTime = diskCache.timestamp;
@@ -118,7 +131,7 @@ window.MUDashboard = (function() {
 
         onlineCache     = result;
         onlineCacheTime = Date.now();
-        await MU.cacheSet('online_statuses', { data: result, timestamp: onlineCacheTime });
+        await MU.cacheSet(CACHE_ONLINE, { data: result, timestamp: onlineCacheTime });
 
         return result;
     }
@@ -126,16 +139,16 @@ window.MUDashboard = (function() {
     // ==================== WATCHLIST ====================
 
     async function getWatchlist() {
-        const data = await MU.dbGet('watchlist');
+        const data = await MU.dbGet(DB_WATCHLIST);
         return data ? Object.entries(data).map(([id, v]) => ({ id, ...v })) : [];
     }
 
     async function addToWatchlist(term) {
-        await MU.dbPush('watchlist', { term, addedBy: ME.username, addedAt: Date.now() });
+        await MU.dbPush(DB_WATCHLIST, { term, addedBy: ME.username, addedAt: Date.now() });
     }
 
     async function removeFromWatchlist(id) {
-        await MU.dbDelete(`watchlist/${id}`);
+        await MU.dbDelete(`${DB_WATCHLIST}/${id}`);
     }
 
     function applyWatchlistToCards() {
@@ -161,13 +174,13 @@ window.MUDashboard = (function() {
 
     // ==================== ОБЪЯВЛЕНИЕ ====================
 
-    async function getAnnouncement() { return await MU.dbGet('announcement'); }
+    async function getAnnouncement() { return await MU.dbGet(DB_ANNOUNCEMENT); }
 
     async function setAnnouncement(text) {
-        await MU.dbSet('announcement', { text, author: ME.username, time: Date.now() });
+        await MU.dbSet(DB_ANNOUNCEMENT, { text, author: ME.username, time: Date.now() });
     }
 
-    async function clearAnnouncement() { await MU.dbDelete('announcement'); }
+    async function clearAnnouncement() { await MU.dbDelete(DB_ANNOUNCEMENT); }
 
     // ==================== ИНТЕРФЕЙС ====================
 
@@ -225,6 +238,7 @@ window.MUDashboard = (function() {
         MU.setHTML(btn, `
             📊 Панель
             <span id="mu-online-count" style="background:#2ecc71;color:#000;border-radius:10px;padding:0 5px;font-size:10px;font-weight:700;">—</span>
+            <span style="opacity:0.5;font-size:10px;font-weight:400">${MU.esc(SITE_NAME)}</span>
         `);
         btn.addEventListener('click', toggleDashboard);
         return btn;
@@ -241,8 +255,9 @@ window.MUDashboard = (function() {
                     <span style="color:#9b59b6;font-weight:700;font-size:13px">📊 Панель управления</span>
                     <span id="mu-dash-updated" style="color:#333;font-size:10px"></span>
                 </div>
-                <div style="color:#555;font-size:10px;margin-top:2px">
-                    Вы: <span style="color:#9b59b6" id="mu-dash-me-name">${MU.esc(ME.username)}</span>
+                <div style="color:#555;font-size:10px;margin-top:2px;display:flex;align-items:center;gap:8px">
+                    <span>Вы: <span style="color:#9b59b6" id="mu-dash-me-name">${MU.esc(ME.username)}</span></span>
+                    <span style="background:rgba(155,89,182,0.15);border:1px solid rgba(155,89,182,0.3);border-radius:8px;padding:1px 6px;color:#9b59b6;font-size:10px">${MU.esc(SITE_NAME)}</span>
                 </div>
             </div>
             <div id="mu-announcement-section" class="mu-dash-section" style="display:none">
