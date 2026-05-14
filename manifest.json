@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mangalib Ultimate Helper",
-  "version": "3.12.2",
+  "version": "3.12.3",
   "description": "Модерация, командная панель, чтение, персонализация для сайтов семейства Lib",
 
   "browser_specific_settings": {

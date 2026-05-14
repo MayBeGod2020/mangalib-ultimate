@@ -1045,12 +1045,12 @@ window.MUModeration = (function() {
             // Пробуем точный селектор
             let card = e.target.closest(CARD_SEL);
 
-            // Фолбэк: ищем карточку по содержимому — у неё есть ссылки "перейти"/"ветка"/"удалить"
+            // Фолбэк: ищем карточку — элемент, содержащий .comment (тело комментария)
+            // Предыдущая версия ошибочно находила div с кнопками действий вместо всей карточки
             if (!card && location.href.includes('/moderation')) {
-                let el = e.target;
+                let el = e.target.parentElement;
                 while (el && el !== document.body) {
-                    const texts = [...(el.querySelectorAll?.('a, button') || [])].map(b => b.innerText?.trim());
-                    if (texts.includes('перейти') || texts.includes('удалить')) {
+                    if (el.querySelector?.('.comment, .comment__content')) {
                         card = el;
                         break;
                     }

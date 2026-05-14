@@ -390,7 +390,7 @@ window.MUAiVerdict = (function () {
         const webhookUrl = settings?.ai?.webhookUrl?.trim();
         if (!webhookUrl) return;
 
-        const commentPreview = (data._commentText || '').slice(0, 300);
+        const commentPreview = (data._commentText || '').slice(0, 200);
         const pageUrl = location.href;
         const siteName = MU.getCurrentSite().name;
 
@@ -417,12 +417,38 @@ window.MUAiVerdict = (function () {
                     })
                 });
             } else if (isTelegram) {
-                // Telegram bot: URL вида https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<ID>
-                const text = `🚫 *Нарушение на ${siteName}*\n*Правило:* ${data.rule || '—'}\n*Причина:* ${data.reason || '—'}\n*Уверенность:* ${data.confidence || '—'}\n\n\`${commentPreview}\`\n\n[Открыть](${pageUrl})`;
-                const url = webhookUrl.includes('?')
-                    ? `${webhookUrl}&text=${encodeURIComponent(text)}&parse_mode=Markdown`
-                    : `${webhookUrl}?text=${encodeURIComponent(text)}&parse_mode=Markdown`;
-                await MU.bgFetch(url, { method: 'POST' });
+                // Telegram: извлекаем chat_id из URL, отправляем POST+JSON+HTML
+                // (надёжнее чем URL-параметры с Markdown — нет проблем с экранированием)
+                const escHtml = t => String(t)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                const text = [
+                    `🚫 <b>Нарушение на ${escHtml(siteName)}</b>`,
+                    `<b>Правило:</b> ${escHtml(data.rule || '—')}`,
+                    `<b>Причина:</b> ${escHtml(data.reason || '—')}`,
+                    `<b>Уверенность:</b> ${escHtml(data.confidence || '—')}`,
+                    '',
+                    `<code>${escHtml(commentPreview)}</code>`,
+                    '',
+                    `<a href="${escHtml(pageUrl)}">Открыть страницу</a>`,
+                ].join('\n');
+
+                try {
+                    const u      = new URL(webhookUrl);
+                    const chatId = u.searchParams.get('chat_id');
+                    const base   = `${u.origin}${u.pathname}`;
+                    await MU.bgFetch(base, {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+                    });
+                } catch {
+                    // Фолбэк без форматирования
+                    const plain = `🚫 Нарушение на ${siteName}\nПравило: ${data.rule || '—'}\nПричина: ${data.reason || '—'}\n\n${commentPreview}`;
+                    const sep   = webhookUrl.includes('?') ? '&' : '?';
+                    await MU.bgFetch(`${webhookUrl}${sep}text=${encodeURIComponent(plain)}`, { method: 'POST' });
+                }
             }
         } catch (e) {
             MU.log('AiVerdict', 'Webhook error:', e);
@@ -620,6 +646,14 @@ window.MUAiVerdict = (function () {
                     if (comment) {
                         markComment(comment, item.reason_key, item.short);
                         flagged++;
+                        // Webhook — уведомляем о каждом найденном нарушении
+                        sendWebhookNotification({
+                            verdict:    'нарушает',
+                            confidence: 'высокая',
+                            rule:       item.reason_key,
+                            reason:     item.short || item.reason_key,
+                            _commentText: extractText(comment),
+                        });
                     }
                 });
 
