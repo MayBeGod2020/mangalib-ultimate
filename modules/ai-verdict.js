@@ -417,8 +417,7 @@ window.MUAiVerdict = (function () {
                     })
                 });
             } else if (isTelegram) {
-                // Telegram: отправляем GET с text в URL — аналогично браузерному тесту
-                // POST+JSON+HTML отвергается при ошибках парсинга разметки
+                // Telegram: GET с text в URL (аналогично браузерному тесту)
                 const text = [
                     `🚫 Нарушение на ${siteName}`,
                     `Правило: ${data.rule || '—'}`,
@@ -434,6 +433,28 @@ window.MUAiVerdict = (function () {
                     `${webhookUrl}${sep}text=${encodeURIComponent(text)}`,
                     { method: 'GET' }
                 );
+            } else {
+                // ntfy.sh и любой другой HTTP webhook — POST с текстом в теле
+                // ntfy.sh: https://ntfy.sh/<topic>  (не заблокирован в РФ, есть приложение)
+                const text = [
+                    `🚫 Нарушение на ${siteName}`,
+                    `Правило: ${data.rule || '—'}`,
+                    `Причина: ${data.reason || '—'}`,
+                    `Уверенность: ${data.confidence || '—'}`,
+                    '',
+                    commentPreview,
+                    '',
+                    pageUrl,
+                ].join('\n');
+                await MU.bgFetch(webhookUrl, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'text/plain; charset=utf-8',
+                        'Title':        `Нарушение на ${siteName}`,
+                        'Tags':         'warning',
+                    },
+                    body: text,
+                });
             }
         } catch (e) {
             MU.log('AiVerdict', 'Webhook error:', e);

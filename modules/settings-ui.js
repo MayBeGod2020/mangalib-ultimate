@@ -640,15 +640,16 @@ window.MUSettingsUI = (function () {
 
             <div class="mu-section-title">Уведомления</div>
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
-                <div class="mu-setting-label">Discord / Telegram webhook</div>
+                <div class="mu-setting-label">Webhook уведомления</div>
                 <div class="mu-setting-desc" style="margin-bottom:4px;">
                     При высокой уверенности ИИ отправит уведомление о нарушении.<br>
-                    Discord: вставь URL вебхука канала.<br>
-                    Telegram: <code style="font-size:10px">https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage?chat_id=&lt;ID&gt;</code>
+                    <b>ntfy.sh</b> (работает в РФ без VPN): <code style="font-size:10px">https://ntfy.sh/твоя-тема</code><br>
+                    <b>Telegram</b>: <code style="font-size:10px">https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage?chat_id=&lt;ID&gt;</code><br>
+                    <b>Discord</b>: вставь URL вебхука канала.
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">
                     <input type="text" id="mu-ai-webhook-input" class="mu-input"
-                        placeholder="https://discord.com/api/webhooks/..."
+                        placeholder="https://ntfy.sh/моя-тема"
                         value="${MU.esc(ai.webhookUrl || '')}"
                         style="flex:1;font-size:11px;">
                     <button id="mu-ai-webhook-save" class="mu-btn"
