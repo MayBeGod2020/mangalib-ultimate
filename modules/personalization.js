@@ -184,61 +184,12 @@ window.MUPersonalization = (function() {
         document.head.appendChild(style);
     }
 
-    // ==================== ГОРЯЧАЯ КЛАВИША CTRL+SHIFT+T ====================
-
-    function showThemeToast(name) {
-        document.getElementById('mu-theme-toast')?.remove();
-        const toast = document.createElement('div');
-        toast.id = 'mu-theme-toast';
-        toast.style.cssText = `
-            position:fixed;top:60px;left:50%;transform:translateX(-50%);
-            z-index:999999;
-            background:var(--background-elevated-1,#fff);
-            border:1px solid var(--mu-accent,#f39c12);
-            border-radius:8px;padding:8px 18px;
-            font-family:var(--reader-font-family,-apple-system,sans-serif);
-            font-size:13px;color:var(--mu-accent,#f39c12);font-weight:600;
-            pointer-events:none;
-            box-shadow:0 4px 16px rgba(0,0,0,0.12);
-            animation:mu-toast-in 0.2s ease;
-        `;
-        if (!document.getElementById('mu-toast-anim')) {
-            const s = document.createElement('style');
-            s.id = 'mu-toast-anim';
-            s.textContent = `@keyframes mu-toast-in{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`;
-            document.head.appendChild(s);
-        }
-        toast.textContent = `🎨 Тема: ${name}`;
-        document.body.appendChild(toast);
-        setTimeout(() => toast?.remove(), 2000);
-    }
-
-    function setupThemeHotkey() {
-        const themeKeys = Object.keys(PRESET_THEMES);
-        document.addEventListener('keydown', async (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-                e.preventDefault();
-                if (!settings.personalization.enabled) {
-                    await MU.updateSetting('personalization', 'enabled', true);
-                }
-                const cur = settings.personalization.theme || 'default';
-                const idx = themeKeys.indexOf(cur);
-                const next = themeKeys[(idx + 1) % themeKeys.length];
-                await MU.updateSetting('personalization', 'theme', next);
-                settings = await MU.getSettings();
-                applyAll();
-                showThemeToast(PRESET_THEMES[next].name);
-            }
-        });
-    }
-
     // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
     async function init() {
         settings = await MU.getSettings();
 
         applyAll();
-        setupThemeHotkey();
 
         MU.on('settingsChanged', async () => {
             settings = await MU.getSettings();

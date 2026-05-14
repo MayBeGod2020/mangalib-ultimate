@@ -110,83 +110,6 @@ window.MUModeration = (function() {
     let activeComment  = null; // комментарий на страницах манги/аниме
     let popupFilled    = false;
 
-    // ==================== ШАБЛОНЫ БАНОВ ====================
-
-    function injectTemplatesPicker(popup) {
-        if (popup.dataset.templatesPicker) return;
-        popup.dataset.templatesPicker = 'true';
-
-        const templates = settings?.moderation?.banTemplates || [];
-        if (templates.length === 0) return;
-
-        const textarea = popup.querySelector('textarea.form-input__field')
-                      || popup.querySelector('textarea');
-        if (!textarea) return;
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.style.cssText = `
-            margin-bottom:6px;padding:3px 10px;
-            background:transparent;
-            border:1px solid var(--mu-accent,#f39c12);
-            border-radius:6px;color:var(--mu-accent,#f39c12);
-            font-size:11px;cursor:pointer;font-family:inherit;
-            display:flex;align-items:center;gap:4px;
-        `;
-        btn.innerHTML = '📋 Шаблоны';
-
-        const dropdown = document.createElement('div');
-        dropdown.style.cssText = `
-            display:none;position:absolute;
-            background:var(--background-elevated-1,#fff);
-            border:1px solid var(--border-base,#e5e5e5);
-            border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);
-            z-index:999999;min-width:220px;overflow:hidden;
-            font-family:inherit;font-size:12px;
-        `;
-
-        templates.forEach((tpl, i) => {
-            const item = document.createElement('div');
-            item.style.cssText = `padding:8px 12px;cursor:pointer;color:var(--text-primary,#212529);border-bottom:1px solid var(--border-light,#ebebeb);`;
-            item.textContent = tpl.name;
-            item.addEventListener('mouseenter', () => item.style.background = 'var(--background-elevated-2,#f7f7f8)');
-            item.addEventListener('mouseleave', () => item.style.background = '');
-            item.addEventListener('click', () => {
-                // Заполняем причину
-                if (tpl.reasonKey) forceSelect(popup, tpl.reasonKey);
-                // Заполняем комментарий
-                if (tpl.comment && textarea) setTextarea(textarea, tpl.comment);
-                dropdown.style.display = 'none';
-            });
-            if (i === templates.length - 1) item.style.borderBottom = 'none';
-            dropdown.appendChild(item);
-        });
-
-        let open = false;
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            open = !open;
-            if (open) {
-                const r = btn.getBoundingClientRect();
-                dropdown.style.top  = r.bottom + 4 + 'px';
-                dropdown.style.left = r.left + 'px';
-                dropdown.style.display = 'block';
-                document.body.appendChild(dropdown);
-            } else {
-                dropdown.style.display = 'none';
-            }
-        });
-        document.addEventListener('click', () => {
-            dropdown.style.display = 'none';
-            open = false;
-        }, { once: false });
-
-        // Вставляем кнопку перед textarea
-        const group = [...popup.querySelectorAll('.form-group')].find(g => g.innerText.includes('Комментарий от модератора'));
-        const insertTarget = group || textarea.parentElement;
-        if (insertTarget) insertTarget.insertAdjacentElement('afterbegin', btn);
-    }
-
     // ==================== ШПАРГАЛКА ====================
 
     function injectCheatsheet(popup, selectValue) {
@@ -859,8 +782,6 @@ window.MUModeration = (function() {
             window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason, popup, { title });
         });
 
-        // Шаблоны банов
-        injectTemplatesPicker(popup);
     }
 
     function handleForumPopup(popup) {
