@@ -483,7 +483,11 @@ window.MUModeration = (function() {
         });
     }
 
+    let _massDeleteRunning = false;
+
     async function massDeleteVisible() {
+        if (_massDeleteRunning) return;
+
         const visibleCards = [...document.querySelectorAll(CARD_SEL)].filter(c =>
             c.style.display !== 'none' && !c.dataset.viewed
         );
@@ -513,6 +517,7 @@ window.MUModeration = (function() {
         `);
         document.body.appendChild(progress);
 
+        _massDeleteRunning = true;
         let cancelled = false;
         document.getElementById('mass-cancel-btn')?.addEventListener('click', () => { cancelled = true; });
 
@@ -564,8 +569,8 @@ window.MUModeration = (function() {
             card.style.filter   = 'grayscale(60%)';
             processed++;
 
-            document.getElementById('mass-progress-text')?.textContent &&
-                (document.getElementById('mass-progress-text').textContent = `${processed} / ${count}`);
+            const progressText = document.getElementById('mass-progress-text');
+            if (progressText) progressText.textContent = `${processed} / ${count}`;
             const bar = document.getElementById('mass-progress-bar');
             if (bar) bar.style.width = `${(processed / count) * 100}%`;
 
@@ -582,6 +587,7 @@ window.MUModeration = (function() {
             </div>
         `);
         setTimeout(() => progress.remove(), 3000);
+        _massDeleteRunning = false;
     }
 
     // ==================== ТАЙТЛ ====================
@@ -899,13 +905,13 @@ window.MUModeration = (function() {
     // ==================== OBSERVER ====================
 
     let mainObserver = null;
-    let _debTimer    = null;
     let _lastPopup   = false;
 
     function debounce(fn, ms) {
+        let timer = null;
         return function(...args) {
-            clearTimeout(_debTimer);
-            _debTimer = setTimeout(() => fn.apply(this, args), ms);
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), ms);
         };
     }
 

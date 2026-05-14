@@ -240,7 +240,7 @@ window.MUUserTooltip = (function () {
     }
 
     function scanLinks() {
-        document.querySelectorAll('a[href*="/ru/user/"]').forEach(attachHover);
+        document.querySelectorAll('a[href*="/user/"]').forEach(attachHover);
     }
 
     // ==================== INIT ====================

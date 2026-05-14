@@ -103,6 +103,9 @@ window.MUDashboard = (function() {
 
         // Загружаем по одному с задержкой 2 секунды чтобы не превысить лимит
         for (const mod of allModerators) {
+            // Прерываем если панель закрыта — не тратим запросы впустую
+            if (!isPanelOpen) break;
+
             try {
                 const data = await MU.apiCall(`user/${mod.id}`);
                 const lastOnline = data?.data?.last_online_at;
@@ -136,7 +139,7 @@ window.MUDashboard = (function() {
     }
 
     function applyWatchlistToCards() {
-        document.querySelectorAll('.acp_acq').forEach(card => {
+        document.querySelectorAll('.aek_ael, .abz_ab0, [class*="abz_ab"]').forEach(card => {
             const commentText = card.querySelector('.comment__content')?.innerText?.toLowerCase() || '';
             const authorText  = card.querySelector('.comment-author__name')?.innerText?.toLowerCase() || '';
             const fullText    = commentText + ' ' + authorText;

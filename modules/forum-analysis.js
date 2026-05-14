@@ -9,6 +9,7 @@ window.MUForumAnalysis = (function () {
     let settings = null;
 
     const PANEL_ID = 'mu-forum-analysis-panel';
+    let activeController = null;
 
     // Промпт для анализа форумной темы
     // {FORUM_RULES} заменяется на правила из настроек
@@ -172,6 +173,8 @@ window.MUForumAnalysis = (function () {
 
     function removePanel() {
         document.getElementById(PANEL_ID)?.remove();
+        activeController?.abort();
+        activeController = null;
     }
 
     function showPanel(state, data = {}) {

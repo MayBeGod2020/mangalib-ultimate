@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         })
         .then(async r => {
             const text = await r.text();
-            sendResponse({ ok: true, status: r.status, text });
+            sendResponse({ ok: r.ok, status: r.status, text });
         })
         .catch(e => {
             sendResponse({ ok: false, error: e.message });

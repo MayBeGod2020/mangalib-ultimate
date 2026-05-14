@@ -106,6 +106,13 @@ window.MUPersonalization = (function() {
         const wallpaper = settings.personalization.customWallpaper;
         if (!wallpaper) return;
 
+        // Безопасность: принимаем только data:image/... и http(s)-URL
+        const isDataImage = wallpaper.startsWith('data:image/');
+        const isHttpUrl   = /^https?:\/\//i.test(wallpaper);
+        if (!isDataImage && !isHttpUrl) return;
+        // Экранируем кавычки чтобы исключить CSS-инъекцию через URL
+        const safeWallpaper = wallpaper.replace(/'/g, '%27').replace(/\)/g, '%29');
+
         const opacity = settings.personalization.wallpaperOpacity ?? 0.3;
 
         const style = document.createElement('style');
@@ -118,7 +125,7 @@ window.MUPersonalization = (function() {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background-image: url('${wallpaper}');
+                background-image: url('${safeWallpaper}');
                 background-size: cover;
                 background-position: center;
                 background-attachment: fixed;
