@@ -32,6 +32,7 @@ window.MUDashboard = (function() {
     let currentWatchlist = [];
     let lastWatchlistStr = '';
     let pollIntervalId = null;
+    let clockIntervalId = null;
     let isPanelOpen = false;
 
     // ==================== ЗАГРУЗКА ДАННЫХ ====================
@@ -487,6 +488,7 @@ window.MUDashboard = (function() {
             if (e.target.closest('#mu-settings-panel')) return;
             panel.classList.remove('open');
             isPanelOpen = false;
+            stopClock();
         });
 
         document.getElementById('mu-add-watch').addEventListener('click', async () => {
@@ -509,6 +511,7 @@ window.MUDashboard = (function() {
         if (!panel) return;
         panel.classList.remove('open');
         isPanelOpen = false;
+        stopClock();
     }
 
     function toggleDashboard() {
@@ -528,8 +531,32 @@ window.MUDashboard = (function() {
             }
             // Закрываем панель настроек если открыта
             MU.emit('panelOpen', 'dashboard');
+            startClock();
             refresh();
         }
+    }
+
+    // ==================== UTC-ЧАСЫ ====================
+
+    function tickClock() {
+        const el = document.getElementById('mu-dash-updated');
+        if (!el) return;
+        const now = new Date();
+        const h = String(now.getUTCHours()).padStart(2, '0');
+        const m = String(now.getUTCMinutes()).padStart(2, '0');
+        const s = String(now.getUTCSeconds()).padStart(2, '0');
+        el.textContent = `${h}:${m}:${s} UTC`;
+    }
+
+    function startClock() {
+        tickClock(); // сразу показываем
+        clearInterval(clockIntervalId);
+        clockIntervalId = setInterval(tickClock, 1000);
+    }
+
+    function stopClock() {
+        clearInterval(clockIntervalId);
+        clockIntervalId = null;
     }
 
     // ==================== ОБНОВЛЕНИЕ ДАННЫХ ====================
@@ -551,8 +578,7 @@ window.MUDashboard = (function() {
         await renderAnnouncement();
         await renderWatchlist();
 
-        const updEl = document.getElementById('mu-dash-updated');
-        if (updEl) updEl.textContent = new Date().toLocaleTimeString('ru-RU');
+        // Время тикает отдельно — см. startClock()
     }
 
     function renderModeratorsList(onlineStatuses) {
