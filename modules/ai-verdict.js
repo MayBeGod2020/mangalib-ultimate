@@ -311,6 +311,15 @@ window.MUAiVerdict = (function () {
                         cursor:pointer;font-size:10px;font-family:inherit;">
                         🔄 Перепроверить
                     </button>
+                    ${data.verdict === 'нарушает' && data.reason_key && data._popup ? `
+                    <button id="mu-ai-apply"
+                        style="flex:1;padding:4px 8px;border-radius:6px;
+                        border:1px solid #e74c3c;
+                        background:rgba(231,76,60,0.08);
+                        color:#e74c3c;font-weight:600;
+                        cursor:pointer;font-size:10px;font-family:inherit;">
+                        🔨 Применить
+                    </button>` : ''}
                 </div>
             `);
             document.getElementById('mu-ai-close-btn')?.addEventListener('click', () => {
@@ -360,8 +369,64 @@ window.MUAiVerdict = (function () {
             }
         });
 
+        // Кнопка «Применить» — вставляет причину в попап бана
+        document.getElementById('mu-ai-apply')?.addEventListener('click', () => {
+            MU.emit('aiApplyVerdict', { reasonKey: data.reason_key, popup: data._popup });
+            document.getElementById(PANEL_ID)?.remove();
+        });
+
+        // Webhook уведомление при вердикте «нарушает» с высокой уверенностью
+        if (data.verdict === 'нарушает' && data.confidence === 'высокая') {
+            sendWebhookNotification(data);
+        }
+
         // Автоскрытие через 30 секунд
         setTimeout(() => document.getElementById(PANEL_ID)?.remove(), 30000);
+    }
+
+    // ==================== WEBHOOK ====================
+
+    async function sendWebhookNotification(data) {
+        const webhookUrl = settings?.ai?.webhookUrl?.trim();
+        if (!webhookUrl) return;
+
+        const commentPreview = (data._commentText || '').slice(0, 300);
+        const pageUrl = location.href;
+        const siteName = MU.getCurrentSite().name;
+
+        // Определяем формат по URL — Discord или Telegram
+        const isDiscord  = webhookUrl.includes('discord.com/api/webhooks');
+        const isTelegram = webhookUrl.includes('api.telegram.org');
+
+        try {
+            if (isDiscord) {
+                await MU.bgFetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: `🚫 Нарушение на ${siteName}`,
+                            description: `**Правило:** ${data.rule || '—'}\n**Причина:** ${data.reason || '—'}\n\n> ${commentPreview}`,
+                            color: 0xe74c3c,
+                            fields: [
+                                { name: 'Уверенность', value: data.confidence || '—', inline: true },
+                                { name: 'Страница', value: `[Открыть](${pageUrl})`, inline: true },
+                            ],
+                            footer: { text: 'Mangalib Ultimate Helper' },
+                        }]
+                    })
+                });
+            } else if (isTelegram) {
+                // Telegram bot: URL вида https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<ID>
+                const text = `🚫 *Нарушение на ${siteName}*\n*Правило:* ${data.rule || '—'}\n*Причина:* ${data.reason || '—'}\n*Уверенность:* ${data.confidence || '—'}\n\n\`${commentPreview}\`\n\n[Открыть](${pageUrl})`;
+                const url = webhookUrl.includes('?')
+                    ? `${webhookUrl}&text=${encodeURIComponent(text)}&parse_mode=Markdown`
+                    : `${webhookUrl}?text=${encodeURIComponent(text)}&parse_mode=Markdown`;
+                await MU.bgFetch(url, { method: 'POST' });
+            }
+        } catch (e) {
+            MU.log('AiVerdict', 'Webhook error:', e);
+        }
     }
 
     // ==================== API ====================

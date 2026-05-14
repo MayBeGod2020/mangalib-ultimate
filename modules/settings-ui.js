@@ -360,6 +360,39 @@ window.MUSettingsUI = (function () {
                 ${renderToggle('moderation', 'autoCheckBan', m.autoCheckBan)}
             </div>
 
+            <div class="mu-section-title">Шаблоны банов</div>
+            <div style="margin-bottom:8px;">
+                <div class="mu-setting-desc" style="margin-bottom:8px;">
+                    Шаблон вставляется в попап бана кнопкой 📋. Выбери причину и текст — они заполнятся автоматически.
+                </div>
+                <div id="mu-ban-templates-list">
+                    ${(m.banTemplates || []).map((tpl, i) => `
+                        <div class="mu-setting-row" data-tpl-idx="${i}" style="flex-wrap:wrap;gap:4px;">
+                            <span style="color:var(--text-primary,#212529);font-size:12px;flex:1;">${MU.esc(tpl.name)}</span>
+                            <span style="color:var(--text-secondary,#8a8a8e);font-size:10px;flex:1;">${MU.esc(tpl.reasonKey || '—')}</span>
+                            <button class="mu-btn mu-btn-danger mu-tpl-delete" data-tpl-idx="${i}"
+                                style="padding:3px 8px;font-size:10px;">✕</button>
+                        </div>
+                    `).join('') || `<div style="color:var(--text-secondary,#8a8a8e);font-size:12px;">Нет шаблонов</div>`}
+                </div>
+                <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                    <input type="text" id="mu-tpl-name" class="mu-input" placeholder="Название шаблона (напр. «Флуд 1 день»)" style="font-size:11px;">
+                    <select id="mu-tpl-reason" class="mu-select" style="width:100%;">
+                        <option value="">— Выбери причину —</option>
+                        ${Object.keys({
+                            'оскорбление пользователей':'','флуд / оффтоп / комментарий без смысла':'',
+                            'реклама / спам':'','спойлер':'','провокации / конфликты':'',
+                            'ненормативная лексика':'','запрещенный / непотребный контент':'','твинк аккаунт':'',
+                            'бессмысленная / пустая тема':'','дубликат темы':'','некорректный заголовок':''
+                        }).map(k => `<option value="${MU.esc(k)}">${MU.esc(k)}</option>`).join('')}
+                    </select>
+                    <textarea id="mu-tpl-comment" class="mu-input" rows="2"
+                        placeholder="Текст комментария модератора (необязательно)"
+                        style="font-size:11px;resize:vertical;"></textarea>
+                    <button id="mu-tpl-add" class="mu-btn" style="align-self:flex-start;">+ Добавить шаблон</button>
+                </div>
+            </div>
+
             <div class="mu-section-title">Список жалоб</div>
             <div class="mu-setting-row">
                 <div>
@@ -638,6 +671,27 @@ window.MUSettingsUI = (function () {
                 ${ai.groqKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Groq ключ сохранён</div>` : ''}
             </div>
 
+            <div class="mu-section-title">Уведомления</div>
+            <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                <div class="mu-setting-label">Discord / Telegram webhook</div>
+                <div class="mu-setting-desc" style="margin-bottom:4px;">
+                    При высокой уверенности ИИ отправит уведомление о нарушении.<br>
+                    Discord: вставь URL вебхука канала.<br>
+                    Telegram: <code style="font-size:10px">https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage?chat_id=&lt;ID&gt;</code>
+                </div>
+                <div style="display:flex;gap:6px;width:100%;">
+                    <input type="text" id="mu-ai-webhook-input" class="mu-input"
+                        placeholder="https://discord.com/api/webhooks/..."
+                        value="${MU.esc(ai.webhookUrl || '')}"
+                        style="flex:1;font-size:11px;">
+                    <button id="mu-ai-webhook-save" class="mu-btn"
+                        style="padding:6px 12px;font-size:11px;white-space:nowrap;">
+                        Сохранить
+                    </button>
+                </div>
+                ${ai.webhookUrl ? `<div style="color:#2ecc71;font-size:10px;">✓ Webhook сохранён</div>` : ''}
+            </div>
+
             <div style="margin-top:8px;padding:10px;
                 background:var(--background-fill-4,rgba(116,116,128,.05));
                 border:1px solid var(--border-base,#e5e5e5);
@@ -781,6 +835,45 @@ window.MUSettingsUI = (function () {
                 renderTab(activeTab);
             });
         }
+
+        // Webhook save
+        const webhookSave = document.getElementById('mu-ai-webhook-save');
+        if (webhookSave) {
+            webhookSave.addEventListener('click', async () => {
+                const val = document.getElementById('mu-ai-webhook-input')?.value?.trim() || '';
+                await MU.updateSetting('ai', 'webhookUrl', val);
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        }
+
+        // Шаблоны — добавить
+        const tplAdd = document.getElementById('mu-tpl-add');
+        if (tplAdd) {
+            tplAdd.addEventListener('click', async () => {
+                const name      = document.getElementById('mu-tpl-name')?.value?.trim();
+                const reasonKey = document.getElementById('mu-tpl-reason')?.value?.trim();
+                const comment   = document.getElementById('mu-tpl-comment')?.value?.trim();
+                if (!name) { alert('Введи название шаблона'); return; }
+                const templates = [...(settings.moderation.banTemplates || [])];
+                templates.push({ name, reasonKey, comment });
+                await MU.updateSetting('moderation', 'banTemplates', templates);
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        }
+
+        // Шаблоны — удалить
+        document.querySelectorAll('.mu-tpl-delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.dataset.tplIdx);
+                const templates = [...(settings.moderation.banTemplates || [])];
+                templates.splice(idx, 1);
+                await MU.updateSetting('moderation', 'banTemplates', templates);
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        });
 
         // Reset all
         const resetAll = document.getElementById('mu-reset-all');

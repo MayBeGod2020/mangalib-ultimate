@@ -6,11 +6,13 @@ window.MUReader = (function() {
 
     const MU = window.MULib;
 
-    let settings        = null;
-    let isScrolling     = false;
+    let settings          = null;
+    let isScrolling       = false;
     let scrollAnimationId = null;
-    let toggleButton    = null;
-    let isAutoNavigating = false; // флаг: переходим на след. главу автоматически
+    let toggleButton      = null;
+    let isAutoNavigating  = false;
+    let manualSpeedPx     = null; // переопределение скорости через Shift+Wheel
+    let speedToastTimer   = null;
 
     // ==================== ПРОВЕРКА СТРАНИЦЫ ЧТЕНИЯ ====================
 
@@ -22,8 +24,44 @@ window.MUReader = (function() {
     // ==================== СКОРОСТЬ ====================
 
     function getScrollSpeed() {
+        if (manualSpeedPx !== null) return manualSpeedPx;
         const speedMap = { 'slow': 0.5, 'medium': 1.5, 'fast': 3.0 };
         return speedMap[settings.reader.scrollSpeed] || 1.5;
+    }
+
+    function adjustSpeed(delta) {
+        if (manualSpeedPx === null) manualSpeedPx = getScrollSpeed();
+        manualSpeedPx = Math.max(0.2, Math.min(8, +(manualSpeedPx + delta).toFixed(1)));
+        showSpeedToast();
+    }
+
+    function showSpeedToast() {
+        let toast = document.getElementById('mu-speed-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'mu-speed-toast';
+            toast.style.cssText = `
+                position:fixed;bottom:80px;right:20px;z-index:999999;
+                background:var(--background-elevated-1,#fff);
+                border:1px solid var(--mu-accent,#f39c12);
+                border-radius:8px;padding:6px 14px;
+                font-family:var(--reader-font-family,-apple-system,sans-serif);
+                font-size:13px;color:var(--mu-accent,#f39c12);font-weight:600;
+                pointer-events:none;
+                box-shadow:0 4px 12px rgba(0,0,0,0.1);
+                transition:opacity 0.3s;
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.style.opacity = '1';
+        toast.textContent = `⚡ ${manualSpeedPx}×`;
+        clearTimeout(speedToastTimer);
+        speedToastTimer = setTimeout(() => {
+            if (toast) {
+                toast.style.opacity = '0';
+                setTimeout(() => toast?.remove(), 300);
+            }
+        }, 1500);
     }
 
     // ==================== ПОИСК СКРОЛЛЯЩЕГОСЯ КОНТЕЙНЕРА ====================
@@ -329,9 +367,15 @@ window.MUReader = (function() {
     // ==================== ОСТАНОВКА ПРИ ВЗАИМОДЕЙСТВИИ ====================
 
     function setupInteractionStop() {
-        window.addEventListener('wheel', () => {
+        // Shift+Wheel — регулировка скорости на лету; обычный Wheel — остановка
+        window.addEventListener('wheel', (e) => {
+            if (e.shiftKey) {
+                e.preventDefault();
+                adjustSpeed(e.deltaY > 0 ? -0.2 : 0.2);
+                return;
+            }
             if (isScrolling) stopScroll();
-        }, { passive: true });
+        }, { passive: false });
         window.addEventListener('touchmove', () => {
             if (isScrolling) stopScroll();
         }, { passive: true });
