@@ -113,6 +113,8 @@
         }
 
         MU.log('Main', 'Все модули запущены');
+
+        await settingsModule?.checkAndShowWelcome?.().catch(() => {});
     }
 
     // SPA навигация — следим за сменой URL

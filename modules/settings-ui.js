@@ -178,6 +178,52 @@ window.MUSettingsUI = (function () {
             .mu-btn-danger { border-color:var(--red,#f44336);color:var(--red,#f44336); }
             .mu-btn-danger:hover { background:rgba(244,67,54,0.08); }
 
+            /* Tooltip icon */
+            .mu-tip-icon {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 15px;
+                height: 15px;
+                border-radius: 50%;
+                background: var(--border-base, #e5e5e5);
+                color: var(--text-secondary, #8a8a8e);
+                font-size: 9px;
+                font-weight: 700;
+                cursor: help;
+                position: relative;
+                flex-shrink: 0;
+                margin-left: 5px;
+                vertical-align: middle;
+                line-height: 1;
+                border: none;
+                outline: none;
+                font-family: inherit;
+            }
+            .mu-tip-icon::after {
+                content: attr(data-tip);
+                position: absolute;
+                bottom: calc(100% + 6px);
+                right: -8px;
+                background: var(--background-elevated-1, #2a2a2a);
+                color: var(--text-primary, #212529);
+                padding: 7px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 400;
+                white-space: normal;
+                width: 210px;
+                line-height: 1.5;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.15s;
+                z-index: 99999;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+                border: 1px solid var(--border-base, #e5e5e5);
+                text-align: left;
+            }
+            .mu-tip-icon:hover::after { opacity: 1; }
+
             /* Wallpaper preview */
             .mu-wallpaper-preview {
                 width:100%;height:80px;
@@ -325,6 +371,10 @@ window.MUSettingsUI = (function () {
         `;
     }
 
+    function tip(text) {
+        return `<button class="mu-tip-icon" data-tip="${MU.esc(text)}" tabindex="-1" aria-label="Подсказка">?</button>`;
+    }
+
     function renderModerationTab() {
         const m = settings.moderation;
         return `
@@ -340,21 +390,21 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Попап бана</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Автозаполнение попапа</div>
+                    <div class="mu-setting-label">Автозаполнение попапа бана ${tip('При клике «Удалить» автоматически заполняет попап: тайтл, автор, текст комментария и причина жалобы')}</div>
                     <div class="mu-setting-desc">Автоматически вставлять текст комментария модератора</div>
                 </div>
                 ${renderToggle('moderation', 'autoFillPopup', m.autoFillPopup)}
             </div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Шпаргалка правил</div>
+                    <div class="mu-setting-label">Шпаргалка правил ${tip('В попапе бана показывает текст правила под выбранной причиной')}</div>
                     <div class="mu-setting-desc">Показывать правила и кликабельные пункты</div>
                 </div>
                 ${renderToggle('moderation', 'cheatsheet', m.cheatsheet)}
             </div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Автонажатие "Забанить"</div>
+                    <div class="mu-setting-label">Автоотметка «Забанить» ${tip('При открытии попапа автоматически ставит галочку «Забанить»')}</div>
                     <div class="mu-setting-desc">Сразу включать чекбокс бана при открытии</div>
                 </div>
                 ${renderToggle('moderation', 'autoCheckBan', m.autoCheckBan)}
@@ -363,14 +413,14 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Список жалоб</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Цветовая кодировка</div>
+                    <div class="mu-setting-label">Цветовая кодировка жалоб ${tip('Окрашивает карточки жалоб по типу нарушения — быстрее ориентироваться в списке')}</div>
                     <div class="mu-setting-desc">Подсвечивать карточки по типу нарушения</div>
                 </div>
                 ${renderToggle('moderation', 'colorizeCards', m.colorizeCards)}
             </div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Автоскролл к следующей</div>
+                    <div class="mu-setting-label">Автоскролл к следующей жалобе ${tip('После закрытия попапа автоматически прокручивает к следующей непросмотренной карточке')}</div>
                     <div class="mu-setting-desc">После закрытия попапа прокрутить к следующей жалобе</div>
                 </div>
                 ${renderToggle('moderation', 'autoScrollToNext', m.autoScrollToNext)}
@@ -384,7 +434,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Включение</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Включить панель модераторов</div>
+                    <div class="mu-setting-label">Панель модераторов ${tip('Показывает онлайн-статус команды, watchlist ключевых слов и объявления. Данные отдельны для каждого сайта семейства Lib')}</div>
                     <div class="mu-setting-desc">Кнопка "📊 Панель" с онлайн статусами</div>
                 </div>
                 ${renderToggle('dashboard', 'enabled', d.enabled)}
@@ -393,7 +443,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Параметры</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Интервал обновления</div>
+                    <div class="mu-setting-label">Интервал обновления ${tip('Как часто обновляется онлайн-статус модераторов (в секундах)')}</div>
                     <div class="mu-setting-desc">Как часто обновлять онлайн статусы</div>
                 </div>
                 <select class="mu-select" data-section="dashboard" data-key="updateInterval">
@@ -411,7 +461,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Автоскролл</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Включить автоскролл</div>
+                    <div class="mu-setting-label">Автоскролл ${tip('Плавная автопрокрутка при чтении манхвы. Колёсиком мыши регулируй скорость. При достижении конца главы переходит на следующую')}</div>
                     <div class="mu-setting-desc">Кнопка ▼ на страницах чтения манхвы</div>
                 </div>
                 ${renderToggle('reader', 'enabled', r.enabled)}
@@ -438,7 +488,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Включение</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Включить персонализацию</div>
+                    <div class="mu-setting-label">Персонализация ${tip('Изменяет внешний вид сайта только для тебя — другие пользователи не видят изменения')}</div>
                     <div class="mu-setting-desc">Применять настройки тем и шрифтов</div>
                 </div>
                 ${renderToggle('personalization', 'enabled', p.enabled)}
@@ -447,7 +497,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Тема</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Готовая тема</div>
+                    <div class="mu-setting-label">Тема ${tip('Встроенные пресеты цветовых схем')}</div>
                     <div class="mu-setting-desc">Выберите цветовую схему</div>
                 </div>
                 <select class="mu-select" data-section="personalization" data-key="theme">
@@ -460,7 +510,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Акцентный цвет</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Кастомный цвет</div>
+                    <div class="mu-setting-label">Акцентный цвет ${tip('Основной цвет кнопок и элементов интерфейса')}</div>
                     <div class="mu-setting-desc">Перебивает цвет темы (пусто = не менять)</div>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center">
@@ -473,7 +523,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Кастомный фон</div>
             <div class="mu-setting-row" style="flex-direction:column;align-items:stretch">
                 <div>
-                    <div class="mu-setting-label">Загрузить обои</div>
+                    <div class="mu-setting-label">Обои ${tip('Фоновое изображение для сайта. Вставь прямую ссылку на картинку (https://...)')}</div>
                     <div class="mu-setting-desc">Изображение фона или URL</div>
                 </div>
                 <input type="file" class="mu-input" id="mu-wallpaper-file" accept="image/*" style="margin-top:6px">
@@ -499,7 +549,7 @@ window.MUSettingsUI = (function () {
             <div class="mu-section-title">Шрифт глав ранобе</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Семейство шрифтов</div>
+                    <div class="mu-setting-label">Шрифт ранобе ${tip('Название шрифта из Google Fonts для чтения ранобе, например: Merriweather')}</div>
                     <div class="mu-setting-desc">Применяется к тексту глав ранобе</div>
                 </div>
                 <select class="mu-select" data-section="personalization" data-key="ranobeFontFamily">
@@ -516,7 +566,7 @@ window.MUSettingsUI = (function () {
             </div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Размер шрифта</div>
+                    <div class="mu-setting-label">Размер шрифта ${tip('Размер текста в пикселях для чтения ранобе')}</div>
                     <div class="mu-setting-desc">${p.ranobeFontSize}px</div>
                 </div>
                 <input type="range" class="mu-input" data-section="personalization" data-key="ranobeFontSize"
@@ -524,7 +574,7 @@ window.MUSettingsUI = (function () {
             </div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Межстрочный интервал</div>
+                    <div class="mu-setting-label">Межстрочный интервал ${tip('Расстояние между строками при чтении ранобе. 1.6 — стандарт, 2.0 — просторнее')}</div>
                     <div class="mu-setting-desc">${p.ranobeLineHeight}</div>
                 </div>
                 <input type="range" class="mu-input" data-section="personalization" data-key="ranobeLineHeight"
@@ -584,14 +634,14 @@ window.MUSettingsUI = (function () {
             ` : ''}
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">ИИ анализ комментариев</div>
+                    <div class="mu-setting-label">ИИ анализ комментариев ${tip('При открытии попапа ИИ автоматически анализирует комментарий и показывает вердикт с объяснением и уверенностью')}</div>
                     <div class="mu-setting-desc">При открытии попапа бана — ИИ покажет нарушает ли комментарий правила</div>
                 </div>
                 ${renderToggle('ai', 'enabled', ai.enabled)}
             </div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Кнопка сканирования страницы</div>
+                    <div class="mu-setting-label">Кнопка сканирования страницы ${tip('Добавляет кнопку «🔍 Проверить страницу» — ИИ пакетно проверяет все комментарии и помечает подозрительные')}</div>
                     <div class="mu-setting-desc">Показывать кнопку "🔍 Проверить страницу"</div>
                 </div>
                 ${renderToggle('ai', 'showScanButton', ai.showScanButton)}
@@ -856,6 +906,99 @@ window.MUSettingsUI = (function () {
         }
     }
 
+    // ==================== ПРИВЕТСТВЕННЫЙ ПОПАП ====================
+
+    function showWelcomeModal() {
+        const overlay = document.createElement('div');
+        overlay.id = 'mu-welcome-overlay';
+        overlay.style.cssText = `
+            position:fixed;inset:0;z-index:999999;
+            background:rgba(0,0,0,0.55);
+            display:flex;align-items:center;justify-content:center;
+            font-family:var(--reader-font-family,-apple-system,sans-serif);
+        `;
+
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background:var(--background-elevated-1,#fff);
+            border:1px solid var(--border-base,#e5e5e5);
+            border-radius:var(--radius-section-block,12px);
+            box-shadow:0 16px 48px rgba(0,0,0,0.25);
+            padding:28px 28px 22px;
+            max-width:460px;width:90%;
+            max-height:90vh;overflow-y:auto;
+        `;
+
+        MU.setHTML(modal, `
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:22px;font-weight:800;color:var(--mu-accent,#f39c12);line-height:1.3;">
+                    🛡️ Mangalib Ultimate Helper
+                </div>
+                <div style="font-size:15px;font-weight:600;color:var(--text-primary,#212529);margin-top:4px;">
+                    Добро пожаловать!
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+                ${[
+                    ['🔨', 'Автозаполнение попапа', 'Тайтл, автор, текст и причина жалобы заполняются автоматически'],
+                    ['🤖', 'ИИ-анализ нарушений', 'ИИ проверяет комментарий и сразу говорит нарушает или нет. Бесплатно через Groq'],
+                    ['📊', 'Командная панель', 'Онлайн-статус модераторов, watchlist слов, объявления команды'],
+                    ['👤', 'Карточки пользователей', 'Наведи на ник — увидишь уровень, роли, историю банов и приватные заметки'],
+                    ['📖', 'Автоскролл при чтении', 'Плавная прокрутка и автопереход на следующую главу'],
+                ].map(([icon, title, desc]) => `
+                    <div style="display:flex;gap:12px;align-items:flex-start;
+                        background:var(--background-fill-4,rgba(116,116,128,.05));
+                        border:1px solid var(--border-base,#e5e5e5);
+                        border-radius:8px;padding:10px 12px;">
+                        <div style="font-size:20px;flex-shrink:0;line-height:1;">${icon}</div>
+                        <div>
+                            <div style="font-weight:700;font-size:13px;color:var(--text-primary,#212529);">${title}</div>
+                            <div style="font-size:11px;color:var(--text-secondary,#8a8a8e);margin-top:2px;line-height:1.5;">${desc}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div style="background:color-mix(in srgb, var(--mu-accent,#f39c12) 10%, transparent);
+                border:1px solid color-mix(in srgb, var(--mu-accent,#f39c12) 30%, transparent);
+                border-radius:8px;padding:10px 14px;margin-bottom:18px;
+                font-size:12px;color:var(--text-primary,#212529);line-height:1.6;">
+                💡 <b>Быстрый старт:</b> нажми ⚙️ → вкладка 🤖 ИИ → вставь бесплатный ключ с
+                <a href="https://console.groq.com" target="_blank"
+                    style="color:var(--mu-accent,#f39c12);">console.groq.com</a>
+            </div>
+
+            <div style="text-align:center;">
+                <button id="mu-welcome-close" style="
+                    background:var(--mu-accent,#f39c12);
+                    color:#fff;border:none;
+                    padding:10px 32px;border-radius:8px;
+                    font-size:14px;font-weight:700;cursor:pointer;
+                    font-family:inherit;transition:opacity 0.15s;
+                ">Начать работу →</button>
+            </div>
+        `);
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        const close = () => overlay.remove();
+        modal.querySelector('#mu-welcome-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    }
+
+    async function checkAndShowWelcome() {
+        return new Promise((resolve) => {
+            chrome.storage.local.get('mu_welcomed', (data) => {
+                if (data.mu_welcomed) { resolve(); return; }
+                chrome.storage.local.set({ mu_welcomed: true }, () => {
+                    setTimeout(() => { showWelcomeModal(); resolve(); }, 2000);
+                });
+            });
+        });
+    }
+
     // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
     async function init() {
@@ -875,7 +1018,7 @@ window.MUSettingsUI = (function () {
 
         MU.log('SettingsUI', 'Модуль настроек запущен');
 
-        return { createButton: createSettingsButton };
+        return { createButton: createSettingsButton, checkAndShowWelcome };
     }
 
     return { init };
