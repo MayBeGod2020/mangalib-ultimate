@@ -138,6 +138,10 @@ window.MUAiVerdict = (function () {
             apiKey   = ai.apiKey || ai.deepseekKey || ''; // миграция старого ключа
             const provKey = ai.provider || 'deepseek';
             provider = PROVIDERS[provKey] || PROVIDERS.deepseek;
+            // Если основной ключ пуст, но есть Groq — используем Groq как основной
+            if (!apiKey && ai.groqKey) {
+                return callAI(systemPrompt, userMessage, signal, maxTokens, true);
+            }
             if (!apiKey) throw new Error('API ключ не задан');
         }
 
@@ -465,7 +469,7 @@ window.MUAiVerdict = (function () {
 
     async function analyze(commentText, reason, popup = null, pageContext = null) {
         const ai = settings?.ai || {};
-        if (!ai.apiKey && !ai.deepseekKey) return;
+        if (!ai.apiKey && !ai.deepseekKey && !ai.groqKey) return;
 
         showPanel('loading');
 
@@ -518,7 +522,7 @@ window.MUAiVerdict = (function () {
 
     function onPopupOpen(commentText, reason, popup = null, pageContext = null) {
         const ai = settings?.ai || {};
-        if (!ai.enabled || (!ai.apiKey && !ai.deepseekKey)) return;
+        if (!ai.enabled || (!ai.apiKey && !ai.deepseekKey && !ai.groqKey)) return;
         analyze(commentText, reason, popup, pageContext);
     }
 
@@ -610,7 +614,7 @@ window.MUAiVerdict = (function () {
     async function batchScanPage() {
         if (batchRunning) return;
         const ai     = settings?.ai || {};
-        const apiKey = ai.apiKey || ai.deepseekKey;
+        const apiKey = ai.apiKey || ai.deepseekKey || ai.groqKey;
         if (!apiKey || !ai.enabled) {
             alert('Включите ИИ и добавьте API ключ в настройках (⚙️ → 🤖 ИИ)');
             return;
