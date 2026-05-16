@@ -554,7 +554,34 @@ window.MUSettingsUI = (function () {
         };
         const p = providers[currentProvider] || providers.deepseek;
 
+        const hasAnyKey = !!(currentKey || ai.groqKey);
+
         return `
+            ${!hasAnyKey ? `
+            <div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.3);
+                border-radius:var(--radius-section-block,8px);padding:12px 14px;margin-bottom:4px;">
+                <div style="font-weight:700;color:var(--mu-accent,#f39c12);margin-bottom:8px;font-size:12px;">
+                    🚀 Первый раз? Вот как запустить ИИ за 2 минуты
+                </div>
+                <div style="font-size:11px;color:var(--text-secondary,#8a8a8e);line-height:1.7;">
+                    ИИ-анализ необязателен — модерация работает и без него.<br>
+                    Если хочешь включить ИИ, самый простой способ (бесплатно):<br>
+                    <ol style="margin:6px 0 0 14px;padding:0;color:var(--text-primary,#212529);">
+                        <li>Зайди на
+                            <a href="https://console.groq.com/keys" target="_blank"
+                                style="color:var(--mu-accent,#f39c12);">console.groq.com</a>
+                            → создай аккаунт (Google или GitHub)
+                        </li>
+                        <li>Нажми <b>Create API Key</b>, скопируй ключ</li>
+                        <li>Вставь его в поле <b>«Groq API ключ»</b> ниже и нажми Сохранить</li>
+                        <li>Включи тумблер <b>«ИИ анализ»</b> чуть ниже</li>
+                    </ol>
+                    <div style="margin-top:8px;opacity:0.7;">
+                        Если уже есть ключ DeepSeek / OpenAI / Gemini — вставь его в поле «API ключ» выше.
+                    </div>
+                </div>
+            </div>
+            ` : ''}
             <div class="mu-setting-row">
                 <div>
                     <div class="mu-setting-label">ИИ анализ комментариев</div>
@@ -619,10 +646,11 @@ window.MUSettingsUI = (function () {
 
             <div class="mu-section-title">Бесплатный фолбэк</div>
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
-                <div class="mu-setting-label">Groq API ключ</div>
+                <div class="mu-setting-label">Groq API ключ <span style="font-size:10px;opacity:0.7;">(бесплатно)</span></div>
                 <div class="mu-setting-desc" style="margin-bottom:4px;">
-                    При ошибке 402/429 запрос автоматически повторится через Groq.
-                    Получить на <a href="https://console.groq.com/keys" target="_blank"
+                    Бесплатный ИИ на базе Llama. Если основной API ключ не заполнен — Groq работает как основной провайдер.
+                    При ошибке 402/429 переключается автоматически.<br>
+                    Получить: <a href="https://console.groq.com/keys" target="_blank"
                         style="color:var(--mu-accent, #f39c12);">console.groq.com/keys</a>
                 </div>
                 <div style="display:flex;gap:6px;width:100%;">

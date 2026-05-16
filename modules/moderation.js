@@ -769,31 +769,35 @@ window.MUModeration = (function() {
         if (!settings?.moderation?.autoFillPopup) return;
         if (!activeCard || popupFilled) return;
 
-        // Ищем textarea — сначала рядом с лейблом, потом любую
-        let textarea = null;
-        const allTa = popup.querySelectorAll('textarea');
-        for (const ta of allTa) {
-            const parent = ta.closest('.form-group, [class*="form-group"], [class*="field"], [class*="group"]');
-            const label  = parent?.textContent || '';
-            if (label.includes('Комментарий от модератора')) { textarea = ta; break; }
-        }
-        if (!textarea && allTa.length > 0) textarea = allTa[allTa.length - 1];
-        if (!textarea) return;
-        popupFilled = true;
-
-        const data = getCardData(activeCard);
-        setTextarea(textarea, buildText(data, '⏳ загружается...'));
-        forceSelect(popup, data.reason);
-        autoCheckBanCheckbox(popup);
-
-        fetchTitle(data.link).then(title => {
-            if (document.querySelector('.popup-body') && textarea) {
-                setTextarea(textarea, buildText(data, title));
+        try {
+            // Ищем textarea — сначала рядом с лейблом, потом любую
+            let textarea = null;
+            const allTa = popup.querySelectorAll('textarea');
+            for (const ta of allTa) {
+                const parent = ta.closest('.form-group, [class*="form-group"], [class*="field"], [class*="group"]');
+                const label  = parent?.textContent || '';
+                if (label.includes('Комментарий от модератора')) { textarea = ta; break; }
             }
-            // AI анализ с контекстом тайтла
-            window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason, popup, { title });
-        });
+            if (!textarea && allTa.length > 0) textarea = allTa[allTa.length - 1];
+            if (!textarea) return;
+            popupFilled = true;
 
+            const data = getCardData(activeCard);
+            setTextarea(textarea, buildText(data, '⏳ загружается...'));
+            forceSelect(popup, data.reason);
+            autoCheckBanCheckbox(popup);
+
+            fetchTitle(data.link).then(title => {
+                if (document.querySelector('.popup-body') && textarea) {
+                    setTextarea(textarea, buildText(data, title));
+                }
+                // AI анализ с контекстом тайтла
+                window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason, popup, { title });
+            }).catch(err => MU.log('Moderation', 'fetchTitle error:', err));
+        } catch (err) {
+            MU.log('Moderation', 'handleModerationPopup error:', err);
+            // Ошибка в расширении не должна блокировать нативный попап
+        }
     }
 
     function handleForumPopup(popup) {
@@ -1057,16 +1061,16 @@ window.MUModeration = (function() {
             // Пробуем точный селектор
             let card = e.target.closest(CARD_SEL);
 
-            // Фолбэк: ищем карточку — элемент, содержащий .comment (тело комментария)
-            // Предыдущая версия ошибочно находила div с кнопками действий вместо всей карточки
+            // Фолбэк: карточка — прямой потомок .reports-container
+            // (надёжнее чем поиск по классам, которые могут меняться)
             if (!card && location.href.includes('/moderation')) {
-                let el = e.target.parentElement;
-                while (el && el !== document.body) {
-                    if (el.querySelector?.('.comment, .comment__content')) {
-                        card = el;
-                        break;
+                const container = document.querySelector('.reports-container');
+                if (container) {
+                    let el = e.target;
+                    while (el && el !== container && el !== document.body) {
+                        if (el.parentElement === container) { card = el; break; }
+                        el = el.parentElement;
                     }
-                    el = el.parentElement;
                 }
             }
 
