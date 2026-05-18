@@ -5,8 +5,26 @@ window.MUAiVerdict = (function () {
     const MU = window.MULib;
     let settings = null;
     let currentRequest = null;
+    let autoHideTimer = null;
+    let batchAborted  = false;
 
     const PANEL_ID = 'mu-ai-verdict';
+
+    // Допустимые значения reason_key — должно совпадать с REASON_MAP в moderation.js
+    const VALID_REASON_KEYS = new Set([
+        'без причины',
+        'оскорбление пользователей',
+        'флуд / оффтоп / комментарий без смысла',
+        'реклама / спам',
+        'спойлер',
+        'провокации / конфликты',
+        'ненормативная лексика',
+        'запрещенный / непотребный контент',
+        'бессмысленная / пустая тема',
+        'дубликат темы',
+        'некорректный заголовок',
+        'твинк аккаунт',
+    ]);
 
     // Промпт для проверки (причина жалобы известна)
     const VERIFY_PROMPT = `Ты — помощник модератора на аниме/манга сайте. Тебе дают текст комментария и причину жалобы. Твоя задача — кратко и чётко ответить, нарушает ли комментарий правила.
@@ -262,6 +280,7 @@ window.MUAiVerdict = (function () {
     function removePanel() {
         document.getElementById(PANEL_ID)?.remove();
         if (currentRequest) { currentRequest.abort?.(); currentRequest = null; }
+        if (autoHideTimer)  { clearTimeout(autoHideTimer); autoHideTimer = null; }
     }
 
     function showPanel(state, data = {}) {
@@ -303,7 +322,8 @@ window.MUAiVerdict = (function () {
             const confColor = { 'высокая': '#2ecc71', 'средняя': '#f39c12', 'низкая': '#e74c3c' };
 
             const esc = MU.esc;
-            const verdictLabel = esc(data.verdict.charAt(0).toUpperCase() + data.verdict.slice(1));
+            const verdictStr   = data.verdict || '';
+            const verdictLabel = esc(verdictStr ? verdictStr.charAt(0).toUpperCase() + verdictStr.slice(1) : '—');
 
             panel.style.background  = `var(--background-elevated-1,#fff)`;
             panel.style.borderColor = c.border;
@@ -403,8 +423,12 @@ window.MUAiVerdict = (function () {
             sendWebhookNotification(data);
         }
 
-        // Автоскрытие через 30 секунд
-        setTimeout(() => document.getElementById(PANEL_ID)?.remove(), 30000);
+        // Автоскрытие через 30 секунд — сохраняем taskId чтобы можно было отменить
+        if (autoHideTimer) clearTimeout(autoHideTimer);
+        autoHideTimer = setTimeout(() => {
+            document.getElementById(PANEL_ID)?.remove();
+            autoHideTimer = null;
+        }, 30000);
     }
 
     // ==================== WEBHOOK ====================
@@ -523,7 +547,12 @@ window.MUAiVerdict = (function () {
 
             showPanel('result', { ...parsed, _commentText: commentText, _reason: reason, _popup: popup, _pageContext: pageContext });
 
-            if (isClassifyMode && parsed.reason_key && popup && document.body.contains(popup)) {
+            if (isClassifyMode
+                && typeof parsed.reason_key === 'string'
+                && VALID_REASON_KEYS.has(parsed.reason_key.toLowerCase().trim())
+                && popup
+                && document.body.contains(popup)
+            ) {
                 window.MUModeration?.selectReason(popup, parsed.reason_key);
             }
 
@@ -649,7 +678,8 @@ window.MUAiVerdict = (function () {
             return;
         }
 
-        batchRunning = true;
+        batchRunning  = true;
+        batchAborted  = false;
         updateScanButton(true);
         clearBadges();
 
@@ -658,6 +688,8 @@ window.MUAiVerdict = (function () {
 
         // Разбиваем на батчи по BATCH_SIZE
         for (let i = 0; i < comments.length; i += BATCH_SIZE) {
+            if (batchAborted) break;
+
             const batch  = comments.slice(i, i + BATCH_SIZE);
             const listed = batch.map((c, idx) => `[${i + idx + 1}] ${extractText(c)}`).join('\n');
 
@@ -665,6 +697,7 @@ window.MUAiVerdict = (function () {
 
             try {
                 const raw = await callAI(BATCH_PROMPT, listed, null, 1000).catch(() => '{}');
+                if (batchAborted) break;
 
                 let parsed;
                 try { parsed = parseJSON(raw); } catch { parsed = {}; }
@@ -693,10 +726,14 @@ window.MUAiVerdict = (function () {
 
         batchRunning = false;
         updateScanButton(false);
-        showBatchStatus(
-            flagged > 0 ? `🚩 Найдено нарушений: ${flagged} из ${total}` : `✅ Нарушений не найдено (${total} комм.)`,
-            flagged > 0 ? '#e74c3c' : '#2ecc71'
-        );
+        if (batchAborted) {
+            showBatchStatus(`⏹ Сканирование остановлено (${flagged} из ${total})`, '#95a5a6');
+        } else {
+            showBatchStatus(
+                flagged > 0 ? `🚩 Найдено нарушений: ${flagged} из ${total}` : `✅ Нарушений не найдено (${total} комм.)`,
+                flagged > 0 ? '#e74c3c' : '#2ecc71'
+            );
+        }
     }
 
     // ==================== БЕЙДЖ «API лимит» ====================
@@ -827,6 +864,8 @@ window.MUAiVerdict = (function () {
         // Инжектируем кнопку когда страница готова
         setTimeout(injectScanButton, 2000);
         MU.on('urlChanged', () => {
+            // Прерываем активное батч-сканирование при смене страницы
+            if (batchRunning) batchAborted = true;
             document.getElementById(SCAN_BTN_ID)?.remove();
             document.getElementById(SCAN_STATUS_ID)?.remove();
             setTimeout(injectScanButton, 2000);

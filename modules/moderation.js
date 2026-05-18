@@ -162,24 +162,59 @@ window.MUModeration = (function() {
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
+    let _forceSelectInterval = null;
+
     function forceSelect(popup, reason) {
-        const value = REASON_MAP[reason.toLowerCase().trim()];
+        const value = REASON_MAP[reason?.toLowerCase?.().trim?.()];
         if (!value) return;
 
+        // Отменяем предыдущий интервал если он ещё активен
+        if (_forceSelectInterval) {
+            clearInterval(_forceSelectInterval);
+            _forceSelectInterval = null;
+        }
+
         let attempts = 0;
-        const interval = setInterval(() => {
+        const MAX_ATTEMPTS = 10;
+        _forceSelectInterval = setInterval(() => {
             attempts++;
+
+            // Если попап уже исчез из DOM — прекращаем
+            if (!document.body.contains(popup)) {
+                clearInterval(_forceSelectInterval);
+                _forceSelectInterval = null;
+                return;
+            }
+
             // Ищем select — сначала по классу, потом любой в попапе
             const select = popup.querySelector('select.form-input__field')
                         || popup.querySelector('select[class*="form-input"]')
                         || popup.querySelector('select');
-            if (!select) { if (attempts >= 10) clearInterval(interval); return; }
+            if (!select) {
+                if (attempts >= MAX_ATTEMPTS) {
+                    clearInterval(_forceSelectInterval);
+                    _forceSelectInterval = null;
+                }
+                return;
+            }
+
             const option = [...select.options].find(o => o.value === value);
-            if (option) option.selected = true;
+            // Защита: если нужного option нет в select — не пытаемся выбрать бесконечно
+            if (!option) {
+                if (attempts >= MAX_ATTEMPTS) {
+                    clearInterval(_forceSelectInterval);
+                    _forceSelectInterval = null;
+                }
+                return;
+            }
+
+            option.selected = true;
             select.dispatchEvent(new Event('change', { bubbles: true }));
             select.dispatchEvent(new Event('input', { bubbles: true }));
-            if (select.value === value || attempts >= 10) {
-                clearInterval(interval);
+
+            if (select.value === value || attempts >= MAX_ATTEMPTS) {
+                clearInterval(_forceSelectInterval);
+                _forceSelectInterval = null;
                 injectCheatsheet(popup, value);
             }
         }, 100);

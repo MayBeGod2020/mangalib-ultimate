@@ -456,12 +456,22 @@ window.MUUserTooltip = (function () {
 
     // ==================== INIT ====================
 
+    // Дебаунс для scanLinks — DOM может изменяться шквалом мутаций
+    let _scanTimer = null;
+    function scanLinksDebounced() {
+        clearTimeout(_scanTimer);
+        _scanTimer = setTimeout(scanLinks, 500);
+    }
+
+    let _observer = null;
+
     async function init() {
         injectStyles();
         scanLinks();
 
-        const observer = new MutationObserver(() => scanLinks());
-        observer.observe(document.body, { childList: true, subtree: true });
+        if (_observer) _observer.disconnect();
+        _observer = new MutationObserver(scanLinksDebounced);
+        _observer.observe(document.body, { childList: true, subtree: true });
 
         MU.on('urlChanged', () => {
             // При смене страницы убираем тултип — anchor-элемент уже удалён из DOM,

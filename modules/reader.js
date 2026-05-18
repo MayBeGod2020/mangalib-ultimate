@@ -29,6 +29,7 @@ window.MUReader = (function() {
     // ==================== ПОИСК СКРОЛЛЯЩЕГОСЯ КОНТЕЙНЕРА ====================
 
     function findScrollContainer() {
+        // 1. Конкретные селекторы читалки семейства Lib
         const selectors = [
             '.reader-container',
             '.reader__images',
@@ -42,18 +43,31 @@ window.MUReader = (function() {
             if (el && el.scrollHeight > el.clientHeight + 50) return el;
         }
 
+        // 2. Более узкий поиск по часто используемым атрибутам и тегам.
+        //    НЕ итерируем все элементы документа — это убивает производительность.
+        const candidateSelectors = [
+            '[class*="reader"]',
+            '[class*="scroll"]',
+            '[data-scroll]',
+            'main',
+            'article',
+            '#app > div',
+        ];
         let best = null;
         let bestScrollHeight = 0;
-        document.querySelectorAll('*').forEach(el => {
-            if (el.scrollHeight > el.clientHeight + 100) {
+        for (const sel of candidateSelectors) {
+            const nodes = document.querySelectorAll(sel);
+            for (const el of nodes) {
+                if (el.scrollHeight <= el.clientHeight + 100) continue;
                 const oy = getComputedStyle(el).overflowY;
                 if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > bestScrollHeight) {
                     bestScrollHeight = el.scrollHeight;
                     best = el;
                 }
             }
-        });
+        }
 
+        // 3. Фолбэк — корень документа
         return best || document.documentElement;
     }
 

@@ -230,7 +230,8 @@ window.MUForumAnalysis = (function () {
             };
             const c          = colors[data.verdict] || colors['спорно'];
             const confColor  = { 'высокая': '#2ecc71', 'средняя': '#f39c12', 'низкая': '#e74c3c' };
-            const verdictLabel = esc(data.verdict.charAt(0).toUpperCase() + data.verdict.slice(1));
+            const verdictStr   = data.verdict || '';
+            const verdictLabel = esc(verdictStr ? verdictStr.charAt(0).toUpperCase() + verdictStr.slice(1) : '—');
             const banCount     = data._banInfo?.count ?? null;
             const banBadge     = banCount !== null
                 ? `<span style="font-size:10px;color:${banCount > 0 ? '#e74c3c' : '#2ecc71'};
@@ -351,8 +352,16 @@ window.MUForumAnalysis = (function () {
 
     // ==================== НАБЛЮДАТЕЛЬ ЗА МЕНЮ ====================
 
+    let _observer = null;
+
     function setupMenuObserver() {
-        const observer = new MutationObserver(mutations => {
+        // Если предыдущий observer ещё активен — отключаем чтобы не плодились слушатели
+        if (_observer) {
+            _observer.disconnect();
+            _observer = null;
+        }
+
+        _observer = new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType !== 1) continue;
@@ -364,8 +373,8 @@ window.MUForumAnalysis = (function () {
                 }
             }
         });
-        observer.observe(document.body, { childList: true, subtree: true });
-        return observer;
+        _observer.observe(document.body, { childList: true, subtree: true });
+        return _observer;
     }
 
     // ==================== INIT ====================
