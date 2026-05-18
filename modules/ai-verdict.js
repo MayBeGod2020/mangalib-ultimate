@@ -8,7 +8,8 @@ window.MUAiVerdict = (function () {
     let autoHideTimer = null;
     let batchAborted  = false;
 
-    const PANEL_ID = 'mu-ai-verdict';
+    const PANEL_ID   = 'mu-ai-verdict';
+    const CHAT_PROMPT = `Ты — опытный помощник модератора аниме/манга сайта. Тебе дан контекст нарушения и история банов пользователя. Отвечай кратко, по делу, на русском языке. Если спрашивают про срок бана — учитывай количество и тяжесть прошлых нарушений и давай конкретную рекомендацию (например: «1 день», «3 дня», «7 дней», «постоянный»).`;
 
     // Допустимые значения reason_key — должно совпадать с REASON_MAP в moderation.js
     const VALID_REASON_KEYS = new Set([
@@ -153,7 +154,7 @@ window.MUAiVerdict = (function () {
 
     // Универсальный вызов AI — возвращает текст ответа
     // useGroq=true: принудительно использовать Groq (фолбэк при 402/429)
-    async function callAI(systemPrompt, userMessage, signal, maxTokens = 300, useGroq = false) {
+    async function callAI(systemPrompt, userMessage, signal, maxTokens = 300, useGroq = false, noJsonMode = false) {
         const ai = settings?.ai || {};
 
         let apiKey, provider;
@@ -183,9 +184,13 @@ window.MUAiVerdict = (function () {
         }
 
         // Для провайдеров без jsonMode добавляем напоминание в промпт
-        const sysPrompt = provider.jsonMode
+        // noJsonMode=true — чат-режим, свободный текст, никаких JSON-инструкций
+        const effectiveJsonMode = provider.jsonMode && !noJsonMode;
+        const sysPrompt = noJsonMode
             ? systemPrompt
-            : systemPrompt + '\n\nВАЖНО: отвечай ТОЛЬКО чистым JSON без markdown-блоков и пояснений.';
+            : effectiveJsonMode
+                ? systemPrompt
+                : systemPrompt + '\n\nВАЖНО: отвечай ТОЛЬКО чистым JSON без markdown-блоков и пояснений.';
 
         let url, options;
 
@@ -200,7 +205,7 @@ window.MUAiVerdict = (function () {
                     messages:    [{ role: 'system', content: sysPrompt }, { role: 'user', content: userMessage }],
                     max_tokens:  maxTokens,
                     temperature: 0.1,
-                    ...(provider.jsonMode ? { response_format: { type: 'json_object' } } : {}),
+                    ...(effectiveJsonMode ? { response_format: { type: 'json_object' } } : {}),
                 }),
             };
 
@@ -273,6 +278,56 @@ window.MUAiVerdict = (function () {
         const match = raw.match(/\{[\s\S]*\}/);
         if (match) try { return JSON.parse(match[0]); } catch {}
         throw new Error(`Не удалось разобрать ответ: ${raw.substring(0, 80)}`);
+    }
+
+    // ==================== ИСТОРИЯ БАНОВ ====================
+
+    const BAN_CACHE = {}; // userId → { bans, username, level }
+
+    async function fetchUserBanInfo(userId) {
+        if (BAN_CACHE[userId]) return BAN_CACHE[userId];
+        try {
+            const url = `https://api.cdnlibs.org/api/user/${userId}` +
+                `?fields[]=ban_info&fields[]=roles&fields[]=created_at&fields[]=points`;
+            const resp = await fetch(url);
+            if (!resp.ok) return null;
+            const json = await resp.json();
+            const d = json.data;
+            if (!d) return null;
+            const result = {
+                username: d.username || d.name || `#${userId}`,
+                level:    d.points_info?.level ?? null,
+                roles:    (d.roles || []).map(r => r.name || r).join(', '),
+                regDate:  d.created_at || null,
+                bans:     Array.isArray(d.ban_info) ? d.ban_info : (d.ban_info ? [d.ban_info] : []),
+            };
+            BAN_CACHE[userId] = result;
+            return result;
+        } catch { return null; }
+    }
+
+    function formatBanHistory(info) {
+        if (!info) return 'История банов недоступна.';
+        const lines = [
+            `Пользователь: ${info.username}`,
+            info.level !== null ? `Уровень: ${info.level}` : '',
+            info.roles ? `Роли: ${info.roles}` : '',
+        ].filter(Boolean);
+
+        if (info.bans.length === 0) {
+            lines.push('Банов: нет');
+        } else {
+            lines.push(`Банов всего: ${info.bans.length}`);
+            info.bans.forEach((ban, i) => {
+                const reason = ban.reason?.label || ban.reason || '—';
+                const until  = ban.expired_at
+                    ? `до ${new Date(ban.expired_at).toLocaleDateString('ru')}`
+                    : 'навсегда';
+                const type   = ban.type === 'social' ? 'соц.' : ban.type === 'functional' ? 'функц.' : ban.type || '';
+                lines.push(`  ${i + 1}. ${reason} (${until}${type ? ', ' + type : ''})`);
+            });
+        }
+        return lines.join('\n');
     }
 
     // ==================== UI ====================
@@ -364,6 +419,29 @@ window.MUAiVerdict = (function () {
                         🔨 Применить
                     </button>` : ''}
                 </div>
+                <div style="border-top:1px solid var(--border-base,#e5e5e5);padding:8px 14px 10px;">
+                    <div id="mu-ai-chat-log" style="
+                        max-height:130px;overflow-y:auto;
+                        display:flex;flex-direction:column;gap:5px;
+                        margin-bottom:6px;
+                    "></div>
+                    <div style="display:flex;gap:5px;align-items:center;">
+                        <input id="mu-ai-chat-input" type="text"
+                            placeholder="Спросить ИИ… (срок бана, рекомендации)"
+                            style="flex:1;padding:5px 8px;border-radius:6px;
+                            border:1px solid var(--border-base,#e5e5e5);
+                            background:var(--input-bg,#fff);
+                            color:var(--text-primary,#212529);
+                            font-size:11px;font-family:inherit;outline:none;
+                            transition:border-color 0.15s;">
+                        <button id="mu-ai-chat-send" title="Отправить"
+                            style="padding:5px 9px;border-radius:6px;
+                            border:1px solid var(--mu-accent,#f39c12);
+                            background:color-mix(in srgb,var(--mu-accent,#f39c12) 15%,transparent);
+                            color:var(--mu-accent,#f39c12);font-size:13px;
+                            cursor:pointer;flex-shrink:0;line-height:1;">➤</button>
+                    </div>
+                </div>
             `);
             document.getElementById('mu-ai-close-btn')?.addEventListener('click', () => {
                 document.getElementById(PANEL_ID)?.remove();
@@ -381,7 +459,7 @@ window.MUAiVerdict = (function () {
             `);
         }
 
-        // CSS анимации
+        // CSS анимации + чат-пузыри
         if (!document.getElementById('mu-ai-styles')) {
             const style = document.createElement('style');
             style.id = 'mu-ai-styles';
@@ -390,6 +468,32 @@ window.MUAiVerdict = (function () {
                 @keyframes mu-ai-slide-in {
                     from { opacity:0; transform:translateY(12px); }
                     to   { opacity:1; transform:translateY(0); }
+                }
+                .mu-chat-msg {
+                    padding:5px 9px;border-radius:8px;font-size:11px;line-height:1.5;
+                    max-width:90%;word-break:break-word;animation:mu-ai-slide-in 0.15s ease;
+                }
+                .mu-chat-msg.user {
+                    align-self:flex-end;
+                    background:color-mix(in srgb,var(--mu-accent,#f39c12) 15%,transparent);
+                    border:1px solid color-mix(in srgb,var(--mu-accent,#f39c12) 40%,transparent);
+                    color:var(--text-primary,#212529);
+                }
+                .mu-chat-msg.ai {
+                    align-self:flex-start;
+                    background:var(--background-elevated-2,#f7f7f8);
+                    border:1px solid var(--border-base,#e5e5e5);
+                    color:var(--text-primary,#212529);
+                }
+                .mu-chat-msg.loading {
+                    align-self:flex-start;
+                    background:var(--background-elevated-2,#f7f7f8);
+                    border:1px solid var(--border-base,#e5e5e5);
+                    color:var(--text-secondary,#8a8a8e);
+                    font-style:italic;
+                }
+                #mu-ai-chat-input:focus {
+                    border-color:var(--mu-accent,#f39c12)!important;
                 }
             `;
             document.head.appendChild(style);
@@ -417,6 +521,88 @@ window.MUAiVerdict = (function () {
             MU.emit('aiApplyVerdict', { reasonKey: data.reason_key, popup: data._popup });
             document.getElementById(PANEL_ID)?.remove();
         });
+
+        // Чат с ИИ
+        if (state === 'result') {
+            const chatInput = panel.querySelector('#mu-ai-chat-input');
+            const chatSend  = panel.querySelector('#mu-ai-chat-send');
+            const chatLog   = panel.querySelector('#mu-ai-chat-log');
+
+            // Извлекаем userId автора из popup-элемента
+            const authorLink = data._popup?.querySelector('a[href*="/user/"]');
+            const authorMatch = authorLink?.href?.match(/\/user\/(\d+)/);
+            const authorId    = authorMatch?.[1] || null;
+
+            let banInfoCache  = null;
+            let chatBusy      = false;
+
+            function appendMsg(text, cls) {
+                const div = document.createElement('div');
+                div.className = `mu-chat-msg ${cls}`;
+                div.textContent = text;
+                chatLog.appendChild(div);
+                chatLog.scrollTop = chatLog.scrollHeight;
+                return div;
+            }
+
+            async function sendChatMessage() {
+                const question = chatInput?.value?.trim();
+                if (!question || chatBusy) return;
+
+                chatBusy = true;
+                chatInput.value = '';
+                chatSend.disabled = true;
+                chatSend.style.opacity = '0.5';
+
+                appendMsg(question, 'user');
+                const loadingEl = appendMsg('ИИ думает…', 'loading');
+
+                try {
+                    // Один раз подгружаем историю банов
+                    if (authorId && banInfoCache === null) {
+                        banInfoCache = await fetchUserBanInfo(authorId);
+                    }
+
+                    const banBlock = authorId
+                        ? `\n\nИстория банов:\n${formatBanHistory(banInfoCache)}`
+                        : '';
+
+                    const contextMsg = [
+                        `Комментарий: ${data._commentText || '—'}`,
+                        `Вердикт ИИ: ${data.verdict || '—'}`,
+                        data.rule ? `Правило: ${data.rule}` : '',
+                        data.reason ? `Объяснение: ${data.reason}` : '',
+                        banBlock,
+                        `\nВопрос модератора: ${question}`,
+                    ].filter(Boolean).join('\n');
+
+                    const answer = await callAI(CHAT_PROMPT, contextMsg, null, 200, false, true);
+
+                    loadingEl.remove();
+                    appendMsg(answer || 'Нет ответа', 'ai');
+
+                    // Если панель скрыта автотаймером — продлеваем
+                    if (autoHideTimer) {
+                        clearTimeout(autoHideTimer);
+                        autoHideTimer = setTimeout(() => {
+                            document.getElementById(PANEL_ID)?.remove();
+                            autoHideTimer = null;
+                        }, 30000);
+                    }
+                } catch (e) {
+                    loadingEl.remove();
+                    appendMsg(`Ошибка: ${e.message}`, 'ai');
+                } finally {
+                    chatBusy = false;
+                    if (chatSend) { chatSend.disabled = false; chatSend.style.opacity = '1'; }
+                }
+            }
+
+            chatSend?.addEventListener('click', sendChatMessage);
+            chatInput?.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+            });
+        }
 
         // Webhook уведомление при вердикте «нарушает» с высокой уверенностью
         if (data.verdict === 'нарушает' && data.confidence === 'высокая') {

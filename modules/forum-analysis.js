@@ -124,7 +124,7 @@ window.MUForumAnalysis = (function () {
 
     async function runAnalysis() {
         const ai     = settings?.ai || {};
-        const apiKey = ai.apiKey || ai.deepseekKey || '';
+        const apiKey = ai.apiKey || ai.deepseekKey || ai.groqKey || '';
         if (!ai.enabled || !apiKey) {
             alert('Включите ИИ и добавьте API ключ в настройках (⚙️ → 🤖 ИИ)');
             return;
@@ -201,6 +201,33 @@ window.MUForumAnalysis = (function () {
                     to   { opacity:1; transform:translateY(0); }
                 }
                 @keyframes mu-forum-spin { to { transform:rotate(360deg); } }
+                .mu-fchat-msg {
+                    padding:5px 9px;border-radius:8px;font-size:11px;line-height:1.5;
+                    max-width:90%;word-break:break-word;
+                }
+                .mu-fchat-msg.user {
+                    align-self:flex-end;
+                    background:color-mix(in srgb,var(--mu-accent,#f39c12) 15%,transparent);
+                    border:1px solid color-mix(in srgb,var(--mu-accent,#f39c12) 40%,transparent);
+                    color:var(--text-primary,#212529);
+                }
+                .mu-fchat-msg.ai {
+                    align-self:flex-start;
+                    background:var(--background-elevated-2,#f7f7f8);
+                    border:1px solid var(--border-base,#e5e5e5);
+                    color:var(--text-primary,#212529);
+                }
+                .mu-fchat-msg.loading {
+                    align-self:flex-start;
+                    background:var(--background-elevated-2,#f7f7f8);
+                    border:1px solid var(--border-base,#e5e5e5);
+                    color:var(--text-secondary,#8a8a8e);
+                    font-style:italic;
+                }
+                #mu-forum-chat-input:focus {
+                    border-color:var(--mu-accent,#f39c12)!important;
+                    outline:none;
+                }
             `;
             document.head.appendChild(style);
         }
@@ -275,9 +302,91 @@ window.MUForumAnalysis = (function () {
                         🔄 Перепроверить
                     </button>
                 </div>
+                <div style="border-top:1px solid var(--border-base,#e5e5e5);padding:8px 14px 10px;">
+                    <div id="mu-forum-chat-log" style="
+                        max-height:130px;overflow-y:auto;
+                        display:flex;flex-direction:column;gap:5px;
+                        margin-bottom:6px;
+                    "></div>
+                    <div style="display:flex;gap:5px;align-items:center;">
+                        <input id="mu-forum-chat-input" type="text"
+                            placeholder="Спросить ИИ… (срок бана, причина)"
+                            style="flex:1;padding:5px 8px;border-radius:6px;
+                            border:1px solid var(--border-base,#e5e5e5);
+                            background:var(--input-bg,#fff);
+                            color:var(--text-primary,#212529);
+                            font-size:11px;font-family:inherit;">
+                        <button id="mu-forum-chat-send" title="Отправить"
+                            style="padding:5px 9px;border-radius:6px;
+                            border:1px solid var(--mu-accent,#f39c12);
+                            background:color-mix(in srgb,var(--mu-accent,#f39c12) 15%,transparent);
+                            color:var(--mu-accent,#f39c12);font-size:13px;
+                            cursor:pointer;flex-shrink:0;line-height:1;">➤</button>
+                    </div>
+                </div>
             `);
 
-            document.getElementById('mu-forum-rerun')?.addEventListener('click', runAnalysis);
+            panel.querySelector('#mu-forum-rerun')?.addEventListener('click', runAnalysis);
+
+            // ── Чат с ИИ ──
+            {
+                const chatInput = panel.querySelector('#mu-forum-chat-input');
+                const chatSend  = panel.querySelector('#mu-forum-chat-send');
+                const chatLog   = panel.querySelector('#mu-forum-chat-log');
+                let chatBusy = false;
+
+                const FORUM_CHAT_PROMPT = `Ты — опытный помощник модератора форума аниме/манга сайта. Тебе дан контекст: тема форума, вердикт ИИ и история банов автора. Отвечай кратко, по делу, на русском языке. Если спрашивают про срок бана — учитывай количество и тяжесть прошлых нарушений и давай конкретную рекомендацию.`;
+
+                function appendMsg(text, cls) {
+                    const div = document.createElement('div');
+                    div.className = `mu-fchat-msg ${cls}`;
+                    div.textContent = text;
+                    chatLog.appendChild(div);
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                    return div;
+                }
+
+                async function sendMsg() {
+                    const question = chatInput?.value?.trim();
+                    if (!question || chatBusy) return;
+                    chatBusy = true;
+                    chatInput.value = '';
+                    chatSend.disabled = true;
+                    chatSend.style.opacity = '0.5';
+
+                    appendMsg(question, 'user');
+                    const loadEl = appendMsg('ИИ думает…', 'loading');
+
+                    try {
+                        const banBlock = data._banInfo
+                            ? `\nИстория банов: ${formatBanInfo(data._banInfo)}`
+                            : '';
+                        const ctx = [
+                            `Тема форума: ${data._title || '—'}`,
+                            `Вердикт ИИ: ${data.verdict || '—'}`,
+                            data.rule   ? `Правило: ${data.rule}`    : '',
+                            data.reason ? `Причина: ${data.reason}`  : '',
+                            banBlock,
+                            `\nВопрос модератора: ${question}`,
+                        ].filter(Boolean).join('\n');
+
+                        const answer = await window.MUAiVerdict.callAI(FORUM_CHAT_PROMPT, ctx, null, 200, false, true);
+                        loadEl.remove();
+                        appendMsg(answer || 'Нет ответа', 'ai');
+                    } catch (e) {
+                        loadEl.remove();
+                        appendMsg(`Ошибка: ${e.message}`, 'ai');
+                    } finally {
+                        chatBusy = false;
+                        if (chatSend) { chatSend.disabled = false; chatSend.style.opacity = '1'; }
+                    }
+                }
+
+                chatSend?.addEventListener('click', sendMsg);
+                chatInput?.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+                });
+            }
 
         } else if (state === 'error') {
             panel.style.borderColor = '#e74c3c';

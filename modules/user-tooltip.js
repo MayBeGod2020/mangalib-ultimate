@@ -432,6 +432,9 @@ window.MUUserTooltip = (function () {
         const match = link.href?.match(/\/user\/(\d+)/);
         if (!match) return;
 
+        // Не показываем тултип на страницах профиля — только в комментариях/модерации
+        if (location.pathname.match(/\/user\/\d+/)) return;
+
         // Пропускаем ссылки без аватара внутри — это вкладки профиля
         // (Коллекции, Отзывы, Карты и т.п. тоже содержат /user/ в href)
         if (!link.querySelector('[class*="avatar"]')) return;
@@ -478,6 +481,11 @@ window.MUUserTooltip = (function () {
             // mouseleave на нём никогда не сработает
             removeTooltip();
             clearTimeout(hideTimer);
+            // Сбрасываем метку, чтобы при возврате с профиля в комментарии
+            // attachHover повторно проверил условие (профиль vs комментарии)
+            document.querySelectorAll('[data-mu-tooltip]').forEach(el => {
+                delete el.dataset.muTooltip;
+            });
             setTimeout(scanLinks, 1500);
         });
 
