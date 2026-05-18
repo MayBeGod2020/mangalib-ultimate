@@ -464,6 +464,10 @@ window.MUUserTooltip = (function () {
         observer.observe(document.body, { childList: true, subtree: true });
 
         MU.on('urlChanged', () => {
+            // При смене страницы убираем тултип — anchor-элемент уже удалён из DOM,
+            // mouseleave на нём никогда не сработает
+            removeTooltip();
+            clearTimeout(hideTimer);
             setTimeout(scanLinks, 1500);
         });
 
