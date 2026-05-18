@@ -592,7 +592,7 @@ window.MUModeration = (function() {
                 // Даём autoFillPopup заполнить textarea если включён
                 await new Promise(r => setTimeout(r, 400));
 
-                // Кликаем кнопку подтверждения (то же что Ctrl+Enter)
+                // Кликаем кнопку подтверждения бана
                 const submitBtn = popup.querySelector('.btn.is-filled.variant-danger');
                 if (submitBtn) {
                     submitBtn.click();
@@ -1024,33 +1024,6 @@ window.MUModeration = (function() {
         mainObserver.observe(document.body, { childList: true, subtree: true });
     }
 
-    // ==================== КЛАВИШИ ====================
-
-    function setupHotkeys() {
-        document.addEventListener('keydown', (e) => {
-            const popup = document.querySelector('.popup-body');
-            if (!popup) return;
-
-            if (e.key === 'Escape') { e.preventDefault(); popup.querySelector('.popup-close')?.click(); return; }
-            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); popup.querySelector('.btn.is-filled.variant-danger')?.click(); return; }
-            if (e.ctrlKey && e.key === 'b') { e.preventDefault(); popup.querySelectorAll('.control__input[type="checkbox"]')[0]?.click(); return; }
-            if (e.ctrlKey && e.key === 'p') { e.preventDefault(); popup.querySelectorAll('.control__input[type="checkbox"]')[1]?.click(); return; }
-
-            if (e.ctrlKey && ['1','2','3','4','5','6','7','8','9'].includes(e.key)) {
-                e.preventDefault();
-                const select = popup.querySelector('select.form-input__field');
-                if (!select) return;
-                const option = [...select.options].find(o => o.value === e.key);
-                if (option) {
-                    option.selected = true;
-                    select.dispatchEvent(new Event('change', { bubbles: true }));
-                    select.dispatchEvent(new Event('input', { bubbles: true }));
-                    injectCheatsheet(popup, e.key);
-                }
-            }
-        });
-    }
-
     // ==================== INIT ====================
 
     async function init() {
@@ -1147,7 +1120,6 @@ window.MUModeration = (function() {
             }
         }, true);
 
-        setupHotkeys();
         startObserver();
 
         MU.on('settingsChanged', async (newSettings) => {
