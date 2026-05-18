@@ -27,9 +27,15 @@
 
 [🦊 Установить для Firefox](https://addons.mozilla.org/ru/firefox/addon/mangalib-ultimate-helper/)
 
-### Chrome Web Store / Opera Addons
+### Chrome Web Store
 
-*(ссылки появятся после публикации)*
+[![Chrome](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/mangalib-ultimate-helper/idkcojooalaabnlmdojgcckpefheklmj)
+
+[🌐 Установить для Chrome](https://chromewebstore.google.com/detail/mangalib-ultimate-helper/idkcojooalaabnlmdojgcckpefheklmj)
+
+### Opera Addons
+
+*(ссылка появится после публикации)*
 
 ### Вручную — Chrome / Edge / Opera / Yandex Browser
 
