@@ -431,6 +431,11 @@ window.MUUserTooltip = (function () {
 
         const match = link.href?.match(/\/user\/(\d+)/);
         if (!match) return;
+
+        // Пропускаем ссылки без аватара внутри — это вкладки профиля
+        // (Коллекции, Отзывы, Карты и т.п. тоже содержат /user/ в href)
+        if (!link.querySelector('[class*="avatar"]')) return;
+
         const userId   = match[1];
         const username = link.querySelector('[class*="username"], [class*="name"]')?.innerText?.trim()
                       || link.innerText?.trim()
