@@ -122,6 +122,15 @@ window.MUAiVerdict = (function () {
             keyHint: 'console.groq.com/keys',
             keyPlaceholder: 'gsk_...',
         },
+        custom: {
+            name:    'OpenAI-совместимый (кастомный)',
+            url:     '', // берётся из настроек ai.customApiUrl
+            model:   '', // берётся из настроек ai.customModel
+            format:  'openai',
+            jsonMode: false,
+            keyHint: 'openrouter.ai/keys',
+            keyPlaceholder: 'sk-or-...',
+        },
     };
 
     // Универсальный вызов AI — возвращает текст ответа
@@ -138,6 +147,16 @@ window.MUAiVerdict = (function () {
             apiKey   = ai.apiKey || ai.deepseekKey || ''; // миграция старого ключа
             const provKey = ai.provider || 'deepseek';
             provider = PROVIDERS[provKey] || PROVIDERS.deepseek;
+
+            // Кастомный провайдер — подставляем URL и модель из настроек
+            if (provKey === 'custom') {
+                const customUrl   = ai.customApiUrl?.trim();
+                const customModel = ai.customModel?.trim();
+                if (!customUrl)   throw new Error('Укажи URL кастомного провайдера в настройках ИИ');
+                if (!customModel) throw new Error('Укажи название модели в настройках ИИ');
+                provider = { ...PROVIDERS.custom, url: customUrl, model: customModel };
+            }
+
             // Если основной ключ пуст, но есть Groq — используем Groq как основной
             if (!apiKey && ai.groqKey) {
                 return callAI(systemPrompt, userMessage, signal, maxTokens, true);

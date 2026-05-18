@@ -594,15 +594,17 @@ window.MUSettingsUI = (function () {
         const currentProvider = ai.provider || 'deepseek';
 
         const providers = {
-            deepseek: { name: 'DeepSeek',         hint: 'platform.deepseek.com/api_keys',        ph: 'sk-...' },
-            openai:   { name: 'ChatGPT (OpenAI)',  hint: 'platform.openai.com/api-keys',           ph: 'sk-...' },
-            gemini:   { name: 'Google Gemini',     hint: 'aistudio.google.com/apikey',             ph: 'AIza...' },
-            claude:   { name: 'Claude (Anthropic)',hint: 'console.anthropic.com/settings/keys',    ph: 'sk-ant-...' },
-            qwen:     { name: 'Qwen (Alibaba)',    hint: 'dashscope.console.aliyun.com',           ph: 'sk-...' },
-            grok:     { name: 'Grok (xAI)',        hint: 'console.x.ai',                          ph: 'xai-...' },
-            mistral:  { name: 'Mistral AI',        hint: 'console.mistral.ai',                    ph: '...' },
+            deepseek: { name: 'DeepSeek',                    hint: 'platform.deepseek.com/api_keys',        ph: 'sk-...' },
+            openai:   { name: 'ChatGPT (OpenAI)',             hint: 'platform.openai.com/api-keys',           ph: 'sk-...' },
+            gemini:   { name: 'Google Gemini',                hint: 'aistudio.google.com/apikey',             ph: 'AIza...' },
+            claude:   { name: 'Claude (Anthropic)',           hint: 'console.anthropic.com/settings/keys',    ph: 'sk-ant-...' },
+            qwen:     { name: 'Qwen (Alibaba)',               hint: 'dashscope.console.aliyun.com',           ph: 'sk-...' },
+            grok:     { name: 'Grok (xAI)',                   hint: 'console.x.ai',                          ph: 'xai-...' },
+            mistral:  { name: 'Mistral AI',                   hint: 'console.mistral.ai',                    ph: '...' },
+            custom:   { name: 'OpenAI-совместимый (кастомный)', hint: 'openrouter.ai/keys',                  ph: 'sk-or-...' },
         };
         const p = providers[currentProvider] || providers.deepseek;
+        const isCustom = currentProvider === 'custom';
 
         const hasAnyKey = !!(currentKey || ai.groqKey);
 
@@ -677,6 +679,46 @@ window.MUSettingsUI = (function () {
                 </div>
                 ${currentKey ? `<div style="color:#2ecc71;font-size:10px;">✓ Ключ сохранён</div>` : ''}
             </div>
+
+            ${isCustom ? `
+            <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                <div class="mu-setting-label">API Endpoint URL</div>
+                <div class="mu-setting-desc" style="margin-bottom:4px;">
+                    URL совместимого API. Примеры:<br>
+                    OpenRouter: <code style="font-size:10px">https://openrouter.ai/api/v1/chat/completions</code><br>
+                    LM Studio: <code style="font-size:10px">http://localhost:1234/v1/chat/completions</code>
+                </div>
+                <div style="display:flex;gap:6px;width:100%;">
+                    <input type="text" id="mu-ai-custom-url-input" class="mu-input"
+                        placeholder="https://openrouter.ai/api/v1/chat/completions"
+                        value="${MU.esc(ai.customApiUrl || '')}"
+                        style="flex:1;font-size:11px;">
+                    <button id="mu-ai-custom-url-save" class="mu-btn"
+                        style="padding:6px 12px;font-size:11px;white-space:nowrap;">
+                        Сохранить
+                    </button>
+                </div>
+                ${ai.customApiUrl ? `<div style="color:#2ecc71;font-size:10px;">✓ URL сохранён</div>` : ''}
+            </div>
+            <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                <div class="mu-setting-label">Название модели</div>
+                <div class="mu-setting-desc" style="margin-bottom:4px;">
+                    Бесплатные модели OpenRouter: <code style="font-size:10px">nvidia/llama-3.1-nemotron-70b-instruct:free</code>,
+                    <code style="font-size:10px">meta-llama/llama-3.3-70b-instruct:free</code>
+                </div>
+                <div style="display:flex;gap:6px;width:100%;">
+                    <input type="text" id="mu-ai-custom-model-input" class="mu-input"
+                        placeholder="nvidia/llama-3.1-nemotron-70b-instruct:free"
+                        value="${MU.esc(ai.customModel || '')}"
+                        style="flex:1;font-size:11px;">
+                    <button id="mu-ai-custom-model-save" class="mu-btn"
+                        style="padding:6px 12px;font-size:11px;white-space:nowrap;">
+                        Сохранить
+                    </button>
+                </div>
+                ${ai.customModel ? `<div style="color:#2ecc71;font-size:10px;">✓ Модель: ${MU.esc(ai.customModel)}</div>` : ''}
+            </div>
+            ` : ''}
 
             <div class="mu-section-title">Правила форума</div>
             <div class="mu-setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
@@ -892,6 +934,22 @@ window.MUSettingsUI = (function () {
                 renderTab(activeTab);
             });
         }
+
+        // Custom provider — URL
+        document.getElementById('mu-ai-custom-url-save')?.addEventListener('click', async () => {
+            const val = document.getElementById('mu-ai-custom-url-input')?.value?.trim() || '';
+            await MU.updateSetting('ai', 'customApiUrl', val);
+            settings = await MU.getSettings();
+            renderTab(activeTab);
+        });
+
+        // Custom provider — Model
+        document.getElementById('mu-ai-custom-model-save')?.addEventListener('click', async () => {
+            const val = document.getElementById('mu-ai-custom-model-input')?.value?.trim() || '';
+            await MU.updateSetting('ai', 'customModel', val);
+            settings = await MU.getSettings();
+            renderTab(activeTab);
+        });
 
         // Reset all
         const resetAll = document.getElementById('mu-reset-all');
