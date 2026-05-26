@@ -725,12 +725,17 @@ window.MUModeration = (function() {
     }
 
     function buildText(data, title) {
-        let text = `📖 Тайтл: ${title}\n`;
-        if (data.isChapter) {
-            text += `📑 Глава: ${data.chapter}\n`;
-            if (data.page !== '—') text += `📄 Страница: ${data.page}\n`;
+        const showPageInfo = settings?.moderation?.autoFillPageInfo ?? false;
+        let text = '';
+        if (showPageInfo) {
+            text += `📖 Тайтл: ${title}\n`;
+            if (data.isChapter) {
+                text += `📑 Глава: ${data.chapter}\n`;
+                if (data.page !== '—') text += `📄 Страница: ${data.page}\n`;
+            }
+            text += '\n';
         }
-        text += `\n👤 Нарушитель: ${data.author}\n`;
+        text += `👤 Нарушитель: ${data.author}\n`;
         text += `⚠️ Причина жалобы: ${data.reason}\n`;
         text += `🕐 Время комментария: ${data.time}\n`;
         text += `\n💬 Комментарий:\n${data.commentText}`;
@@ -818,6 +823,7 @@ window.MUModeration = (function() {
             popupFilled = true;
 
             const data = getCardData(activeCard);
+            const showPageInfo = settings?.moderation?.autoFillPageInfo ?? false;
             setTextarea(textarea, buildText(data, '⏳ загружается...'));
             forceSelect(popup, data.reason);
             autoCheckBanCheckbox(popup);
@@ -827,7 +833,7 @@ window.MUModeration = (function() {
                     setTextarea(textarea, buildText(data, title));
                 }
                 // AI анализ с контекстом тайтла
-                window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason, popup, { title });
+                window.MUAiVerdict?.onPopupOpen(data.commentText, data.reason, popup, { title: showPageInfo ? title : '—' });
             }).catch(err => MU.log('Moderation', 'fetchTitle error:', err));
         } catch (err) {
             MU.log('Moderation', 'handleModerationPopup error:', err);

@@ -11,61 +11,81 @@ window.MUPersonalization = (function() {
     // ==================== ГОТОВЫЕ ТЕМЫ ====================
 
     const PRESET_THEMES = {
-        'default': {
-            name: 'По умолчанию',
-            css: ''
-        },
+        'default': { name: 'По умолчанию', css: '' },
+
         'cyberpunk': {
-            name: 'Cyberpunk',
+            name: '🟣 Cyberpunk',
             css: `
-                :root {
-                    --color-accent-rgb: 255, 0, 200 !important;
-                    --color-accent: #ff00c8 !important;
-                }
-                body {
-                    background: linear-gradient(135deg, #0a0014 0%, #14001f 100%) !important;
-                }
-                .button, .btn, button {
-                    text-shadow: 0 0 4px currentColor !important;
-                }
+                :root { --color-accent-rgb:255,0,200!important; --color-accent:#ff00c8!important; }
+                body { background:linear-gradient(135deg,#0a0014 0%,#14001f 100%)!important; }
+                .button,.btn,button { text-shadow:0 0 4px currentColor!important; }
             `
         },
         'nature': {
-            name: 'Nature',
+            name: '🟢 Nature',
             css: `
-                :root {
-                    --color-accent-rgb: 76, 175, 80 !important;
-                    --color-accent: #4caf50 !important;
-                }
-                body {
-                    background: linear-gradient(135deg, #0d1a0d 0%, #1a2a1a 100%) !important;
-                }
+                :root { --color-accent-rgb:76,175,80!important; --color-accent:#4caf50!important; }
+                body { background:linear-gradient(135deg,#0d1a0d 0%,#1a2a1a 100%)!important; }
             `
         },
         'ocean': {
-            name: 'Ocean',
+            name: '🔵 Ocean',
             css: `
-                :root {
-                    --color-accent-rgb: 33, 150, 243 !important;
-                    --color-accent: #2196f3 !important;
-                }
-                body {
-                    background: linear-gradient(135deg, #001629 0%, #002a4d 100%) !important;
-                }
+                :root { --color-accent-rgb:33,150,243!important; --color-accent:#2196f3!important; }
+                body { background:linear-gradient(135deg,#001629 0%,#002a4d 100%)!important; }
             `
         },
         'sunset': {
-            name: 'Sunset',
+            name: '🟠 Sunset',
             css: `
-                :root {
-                    --color-accent-rgb: 255, 152, 0 !important;
-                    --color-accent: #ff9800 !important;
-                }
-                body {
-                    background: linear-gradient(135deg, #1f0a00 0%, #3d1500 100%) !important;
-                }
+                :root { --color-accent-rgb:255,152,0!important; --color-accent:#ff9800!important; }
+                body { background:linear-gradient(135deg,#1f0a00 0%,#3d1500 100%)!important; }
             `
-        }
+        },
+
+        // ── Новые темы ──
+        'sakura': {
+            name: '🌸 Sakura',
+            css: `
+                :root { --color-accent-rgb:233,88,133!important; --color-accent:#e95885!important; }
+                body { background:linear-gradient(135deg,#1a0a10 0%,#2a1020 100%)!important; }
+            `
+        },
+        'midnight': {
+            name: '🌙 Midnight',
+            css: `
+                :root { --color-accent-rgb:100,181,246!important; --color-accent:#64b5f6!important; }
+                body { background:linear-gradient(135deg,#060914 0%,#0d1526 100%)!important; }
+            `
+        },
+        'nord': {
+            name: '❄️ Nord',
+            css: `
+                :root { --color-accent-rgb:136,192,208!important; --color-accent:#88c0d0!important; }
+                body { background:linear-gradient(135deg,#1c2130 0%,#242d3f 100%)!important; }
+            `
+        },
+        'sepia': {
+            name: '📜 Sepia',
+            css: `
+                :root { --color-accent-rgb:188,143,80!important; --color-accent:#bc8f50!important; }
+                body { background:linear-gradient(135deg,#1a1408 0%,#261e0e 100%)!important; }
+            `
+        },
+        'forest': {
+            name: '🌲 Forest',
+            css: `
+                :root { --color-accent-rgb:102,187,106!important; --color-accent:#66bb6a!important; }
+                body { background:linear-gradient(135deg,#0a1a0c 0%,#122018 100%)!important; }
+            `
+        },
+        'crimson': {
+            name: '🔴 Crimson',
+            css: `
+                :root { --color-accent-rgb:229,57,53!important; --color-accent:#e53935!important; }
+                body { background:linear-gradient(135deg,#1a0404 0%,#260a0a 100%)!important; }
+            `
+        },
     };
 
     // ==================== ПРИМЕНЕНИЕ ====================
@@ -80,6 +100,7 @@ window.MUPersonalization = (function() {
         applyWallpaper();
         applyAccentColor();
         applyRanobeFont();
+        applyBorderRadius();
     }
 
     function removeAll() {
@@ -87,6 +108,7 @@ window.MUPersonalization = (function() {
         document.getElementById('mu-wallpaper-style')?.remove();
         document.getElementById('mu-accent-style')?.remove();
         document.getElementById('mu-ranobe-style')?.remove();
+        document.getElementById('mu-radius-style')?.remove();
     }
 
     function applyTheme() {
@@ -158,6 +180,18 @@ window.MUPersonalization = (function() {
                 --color-accent-rgb: ${r}, ${g}, ${b} !important;
             }
         `;
+        document.head.appendChild(style);
+    }
+
+    function applyBorderRadius() {
+        document.getElementById('mu-radius-style')?.remove();
+        const br = settings.personalization.borderRadius || 'normal';
+        if (br === 'normal') return;
+
+        const val = br === 'sharp' ? '0px' : '20px'; // sharp=0, round=20
+        const style = document.createElement('style');
+        style.id = 'mu-radius-style';
+        style.textContent = `:root { --radius-section-block:${val}!important; --radius-sm:${val}!important; }`;
         document.head.appendChild(style);
     }
 

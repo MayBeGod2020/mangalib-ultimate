@@ -397,6 +397,13 @@ window.MUSettingsUI = (function () {
             </div>
             <div class="mu-setting-row">
                 <div>
+                    <div class="mu-setting-label">Вставлять тайтл / главу / страницу ${tip('Сайт сам показывает тайтл и главу в попапе бана. Включай только если у тебя они не отображаются автоматически')}</div>
+                    <div class="mu-setting-desc">Добавлять в попап данные о тайтле и главе</div>
+                </div>
+                ${renderToggle('moderation', 'autoFillPageInfo', m.autoFillPageInfo)}
+            </div>
+            <div class="mu-setting-row">
+                <div>
                     <div class="mu-setting-label">Шпаргалка правил ${tip('В попапе бана показывает текст правила под выбранной причиной')}</div>
                     <div class="mu-setting-desc">Показывать правила и кликабельные пункты</div>
                 </div>
@@ -504,6 +511,19 @@ window.MUSettingsUI = (function () {
                     ${Object.entries(themes).map(([k, t]) => `
                         <option value="${k}" ${p.theme === k ? 'selected' : ''}>${t.name}</option>
                     `).join('')}
+                </select>
+            </div>
+
+            <div class="mu-section-title">Скруглённость</div>
+            <div class="mu-setting-row">
+                <div>
+                    <div class="mu-setting-label">Скруглённость элементов ${tip('Влияет на форму кнопок, карточек и попапов')}</div>
+                    <div class="mu-setting-desc">Sharp — острые углы, Round — сильно скруглённые</div>
+                </div>
+                <select class="mu-select" data-section="personalization" data-key="borderRadius">
+                    <option value="sharp"  ${p.borderRadius === 'sharp'  ? 'selected' : ''}>Sharp</option>
+                    <option value="normal" ${(p.borderRadius === 'normal' || !p.borderRadius) ? 'selected' : ''}>Normal</option>
+                    <option value="round"  ${p.borderRadius === 'round'  ? 'selected' : ''}>Round</option>
                 </select>
             </div>
 
