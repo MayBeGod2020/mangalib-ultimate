@@ -997,12 +997,11 @@ window.MUAiVerdict = (function () {
     function injectScanButton() {
         if (document.getElementById(SCAN_BTN_ID)) return;
 
-        // Показываем только если включено в настройках и есть комментарии
-        // Разрешаем на /moderation/comments, блокируем только на /moderation/ (список жалоб)
-        const hasComments      = document.querySelector('.comment__content, .comment__body');
-        const isModListPage    = /\/moderation\/?$/.test(location.pathname) ||
-                                 /\/moderation\/(?!comments)/.test(location.pathname);
-        if (!hasComments || isModListPage) return;
+        // Блокируем только на странице списка жалоб /moderation/ — там нет комментариев
+        // На всех остальных страницах (манга, глава, форум) кнопка может быть нужна
+        const isModListPage = /\/moderation\/?$/.test(location.pathname) ||
+                              /\/moderation\/(?!comments)/.test(location.pathname);
+        if (isModListPage) return;
         if (!settings?.ai?.showScanButton) return;
 
         const btn = document.createElement('button');
