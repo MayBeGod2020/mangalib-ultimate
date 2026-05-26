@@ -8,7 +8,7 @@ window.MUSettingsUI = (function () {
 
     let settings = null;
     let isPanelOpen = false;
-    let activeTab = 'moderation';
+    let activeTab = 'help';
 
     // ==================== СТИЛИ ====================
 
@@ -288,7 +288,7 @@ window.MUSettingsUI = (function () {
         }, 500);
 
         renderTabs();
-        renderTab('moderation');
+        renderTab('help');
     }
 
     function closeSettings() {
@@ -324,6 +324,7 @@ window.MUSettingsUI = (function () {
         if (!tabsEl) return;
 
         const tabs = [
+            { id: 'help', label: '❓ Помощь' },
             { id: 'moderation', label: '🛡️ Модерация' },
             { id: 'dashboard', label: '📊 Панель' },
             { id: 'reader', label: '📖 Чтение' },
@@ -353,6 +354,7 @@ window.MUSettingsUI = (function () {
         const contentEl = document.getElementById('mu-settings-content');
         if (!contentEl) return;
 
+        if (tabId === 'help') MU.setHTML(contentEl, renderHelpTab());
         if (tabId === 'moderation') MU.setHTML(contentEl, renderModerationTab());
         if (tabId === 'dashboard') MU.setHTML(contentEl, renderDashboardTab());
         if (tabId === 'reader') MU.setHTML(contentEl, renderReaderTab());
@@ -373,6 +375,112 @@ window.MUSettingsUI = (function () {
 
     function tip(text) {
         return `<button class="mu-tip-icon" data-tip="${MU.esc(text)}" tabindex="-1" aria-label="Подсказка">?</button>`;
+    }
+
+    function renderHelpTab() {
+        function block(icon, title, color, steps) {
+            return `
+            <div style="border:1px solid ${color}33;border-radius:10px;overflow:hidden;margin-bottom:10px;">
+                <div style="background:${color}18;padding:9px 12px;display:flex;align-items:center;gap:8px;
+                    border-bottom:1px solid ${color}22;cursor:pointer;"
+                    onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';
+                             this.querySelector('.mu-help-arrow').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼'">
+                    <span style="font-size:16px;">${icon}</span>
+                    <span style="font-weight:700;font-size:12px;color:${color};flex:1;">${title}</span>
+                    <span class="mu-help-arrow" style="color:${color};font-size:10px;">▼</span>
+                </div>
+                <div style="padding:10px 12px;display:flex;flex-direction:column;gap:7px;">
+                    ${steps.map(([num, text]) => `
+                        <div style="display:flex;gap:9px;align-items:flex-start;">
+                            <span style="
+                                flex-shrink:0;width:20px;height:20px;border-radius:50%;
+                                background:${color}22;border:1px solid ${color}55;
+                                color:${color};font-size:10px;font-weight:700;
+                                display:flex;align-items:center;justify-content:center;line-height:1;">
+                                ${num}
+                            </span>
+                            <span style="font-size:11px;color:var(--text-primary,#212529);line-height:1.6;">${text}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+
+        function note(text) {
+            return `<div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.25);
+                border-radius:8px;padding:8px 12px;font-size:11px;
+                color:var(--text-primary,#212529);line-height:1.6;margin-bottom:10px;">
+                💡 ${text}</div>`;
+        }
+
+        return `
+            ${note('Расширение работает <b>только для модераторов и администраторов</b>. Обычные пользователи не видят интерфейс.')}
+
+            <div class="mu-section-title" style="margin-top:0;">С чего начать</div>
+            ${block('🚀', 'Быстрый старт — первые шаги', '#f39c12', [
+                ['1', 'После установки перейди на <b>mangalib.me</b> (или другой сайт семейства Lib) под своим аккаунтом модератора'],
+                ['2', 'В правом верхнем углу появятся две кнопки: <b>📊 Панель</b> и <b>⚙️ Настройки</b>'],
+                ['3', 'Нажми <b>⚙️</b> — откроются настройки. Здесь эта вкладка «❓ Помощь»'],
+                ['4', 'Для включения ИИ перейди в вкладку <b>🤖 ИИ</b> и вставь API ключ (бесплатный — на console.groq.com)'],
+            ])}
+
+            <div class="mu-section-title">Основные функции</div>
+            ${block('🛡️', 'Модерация жалоб', '#e74c3c', [
+                ['1', 'Открой страницу <b>/moderation/</b> — список жалоб пользователей'],
+                ['2', 'Карточки жалоб автоматически <b>подсвечиваются цветом</b> по типу нарушения'],
+                ['3', 'Нажми кнопку <b>«Удалить»</b> на карточке жалобы — попап бана откроется уже заполненным: автор, текст комментария и причина'],
+                ['4', 'Если включён ИИ — в правом нижнем углу появится <b>панель вердикта</b> с анализом нарушения'],
+                ['5', 'Кнопка <b>🔨 Применить</b> в панели ИИ сразу выставляет причину бана в попапе'],
+                ['6', 'В панели ИИ есть <b>чат</b> — напиши «Сколько дать бан?» и ИИ ответит с учётом истории банов пользователя'],
+            ])}
+
+            ${block('🤖', 'ИИ-анализ комментариев', '#9b59b6', [
+                ['1', '<b>Автоматически</b> срабатывает при открытии попапа бана — ничего не нужно нажимать'],
+                ['2', 'Показывает: вердикт (нарушает / не нарушает / спорно), объяснение и уверенность в %'],
+                ['3', 'Кнопка <b>«🔍 Проверить страницу»</b> (нижний левый угол) — пакетная проверка всех комментариев, подозрительные помечаются значком 🚩'],
+                ['4', 'Для форумных тем: нажми <b>«...»</b> (три точки) рядом с темой → <b>«🤖 Анализ темы»</b>'],
+                ['5', '<b>Настройка ИИ:</b> ⚙️ → вкладка 🤖 ИИ → выбери провайдера → вставь ключ → сохрани → включи тумблер'],
+            ])}
+
+            ${block('📊', 'Командная панель', '#3498db', [
+                ['1', 'Нажми кнопку <b>📊 Панель</b> в правом верхнем углу'],
+                ['2', '<b>Онлайн-статус</b> — видишь кто из модераторов сейчас на сайте'],
+                ['3', '<b>Watchlist</b> — список ключевых слов. Если такое слово появляется в комментарии — ты получишь предупреждение'],
+                ['4', '<b>Объявления</b> — общие заметки для команды (видны всем модераторам)'],
+                ['5', 'Данные отдельны для каждого сайта: MangaLib, AnimeLib, HentaiLib и т.д.'],
+            ])}
+
+            ${block('👤', 'Карточки пользователей', '#2ecc71', [
+                ['1', 'Наведи курсор на <b>ник пользователя</b> в комментарии — появится всплывающая карточка'],
+                ['2', 'В карточке: уровень, роли, дата регистрации, <b>история банов</b>'],
+                ['3', 'Можно добавить <b>приватную заметку</b> — нажми ✏️ в карточке. Заметки видны только тебе'],
+                ['4', '<b>На странице профиля</b> (/user/...) карточка не появляется — только в комментариях'],
+            ])}
+
+            ${block('📖', 'Автоскролл при чтении', '#1abc9c', [
+                ['1', 'Открой любую главу манхвы/манги для чтения'],
+                ['2', 'В углу появится кнопка <b>▼</b> — нажми для запуска автоскролла'],
+                ['3', '<b>Колёсиком мыши</b> регулируй скорость прокрутки'],
+                ['4', 'Дойдя до конца главы, расширение <b>автоматически перейдёт</b> на следующую'],
+            ])}
+
+            ${block('🔔', 'Webhook-уведомления', '#e67e22', [
+                ['1', 'При высокой уверенности ИИ (≥80%) отправляет пуш-уведомление о нарушении'],
+                ['2', '<b>ntfy.sh</b> — работает в России без VPN. Установи приложение ntfy на телефон, укажи URL: <code style="font-size:10px">https://ntfy.sh/твоя-тема</code>'],
+                ['3', '<b>Telegram</b> — нужен бот (@BotFather). URL вида: <code style="font-size:10px">https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage?chat_id=&lt;ID&gt;</code>'],
+                ['4', 'Webhook настраивается в ⚙️ → 🤖 ИИ → раздел «Уведомления»'],
+            ])}
+
+            <div style="margin-top:4px;padding:10px 12px;
+                background:var(--background-fill-4,rgba(116,116,128,.05));
+                border:1px solid var(--border-base,#e5e5e5);
+                border-radius:8px;font-size:11px;
+                color:var(--text-secondary,#8a8a8e);line-height:1.7;text-align:center;">
+                📌 Все настройки сохраняются в браузере автоматически<br>
+                🔗 <a href="https://github.com/MayBeGod2020/mangalib-ultimate" target="_blank"
+                    style="color:var(--mu-accent,#f39c12);">GitHub — полная документация</a>
+            </div>
+        `;
     }
 
     function renderModerationTab() {
