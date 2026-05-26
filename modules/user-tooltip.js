@@ -8,6 +8,7 @@ window.MUUserTooltip = (function () {
     const CACHE = {}; // userId → данные (чтобы не дёргать API дважды)
 
     let hideTimer = null;
+    let showTimer = null;   // задержка перед показом — не показываем при быстром проходе мышью
     let currentTooltip = null;
 
     // ==================== ЗАМЕТКИ ====================
@@ -321,7 +322,10 @@ window.MUUserTooltip = (function () {
         `);
 
         // Тултип интерактивный — не скрываем пока мышь внутри
-        tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        tip.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimer);
+            clearTimeout(showTimer);
+        });
         tip.addEventListener('mouseleave', () => {
             hideTimer = setTimeout(removeTooltip, 300);
         });
@@ -446,9 +450,13 @@ window.MUUserTooltip = (function () {
 
         link.addEventListener('mouseenter', () => {
             clearTimeout(hideTimer);
-            showTooltip(userId, username, link);
+            clearTimeout(showTimer);
+            // Показываем только если курсор задержался — иначе при быстром
+            // пролёте по никам тултип мигает или не успевает появиться
+            showTimer = setTimeout(() => showTooltip(userId, username, link), 250);
         });
         link.addEventListener('mouseleave', () => {
+            clearTimeout(showTimer); // курсор ушёл до показа — отменяем
             hideTimer = setTimeout(removeTooltip, 300);
         });
     }
@@ -481,6 +489,7 @@ window.MUUserTooltip = (function () {
             // mouseleave на нём никогда не сработает
             removeTooltip();
             clearTimeout(hideTimer);
+            clearTimeout(showTimer);
             // Сбрасываем метку, чтобы при возврате с профиля в комментарии
             // attachHover повторно проверил условие (профиль vs комментарии)
             document.querySelectorAll('[data-mu-tooltip]').forEach(el => {
