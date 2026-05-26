@@ -220,14 +220,30 @@ window.MUPersonalization = (function() {
 
     // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
-    async function init() {
+    // Применяем стили немедленно при загрузке страницы — до задержки в main.js
+    // и до проверки роли модератора. Это устраняет задержку появления темы
+    // на новых вкладках и перекрытие стилями сайта при SPA-рендере.
+    async function applyNow() {
         settings = await MU.getSettings();
+        applyAll();
+    }
 
+    async function init() {
+        // Повторно применяем (settings уже загружены в applyNow)
+        if (!settings) settings = await MU.getSettings();
         applyAll();
 
-        MU.on('settingsChanged', async () => {
-            settings = await MU.getSettings();
+        // Кросс-вкладочная синхронизация и изменения из настроек
+        MU.on('settingsChanged', (newSettings) => {
+            // Используем переданные данные напрямую — не делаем лишний async round-trip
+            if (newSettings) settings = newSettings;
             applyAll();
+        });
+
+        // SPA-навигация: сайт может перерендерить страницу и перекрыть наши стили
+        MU.on('urlChanged', () => {
+            // Небольшая задержка чтобы сайт успел отрендериться
+            setTimeout(applyAll, 300);
         });
 
         MU.log('Personalization', 'Модуль персонализации запущен');
@@ -235,6 +251,7 @@ window.MUPersonalization = (function() {
 
     return {
         init,
+        applyNow,
         getPresetThemes: () => PRESET_THEMES
     };
 

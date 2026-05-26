@@ -130,6 +130,11 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
+    // Персонализацию применяем НЕМЕДЛЕННО — тема не должна мигать при загрузке.
+    // Не ждём проверки роли модератора: стили безвредны для обычных пользователей
+    // (у них просто не будет сохранённых настроек → applyAll ничего не применит).
+    window.MUPersonalization.applyNow().catch(() => {});
+
     // Запускаем когда страница готова
     if (document.readyState === 'complete') {
         setTimeout(() => { init(); setupSPAObserver(); }, 1000);
