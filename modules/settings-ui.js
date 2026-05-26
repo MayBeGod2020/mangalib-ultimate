@@ -276,6 +276,7 @@ window.MUSettingsUI = (function () {
         // Закрытие по клику вне (с задержкой чтобы не закрывать сразу при создании)
         setTimeout(() => {
             document.addEventListener('click', (e) => {
+                if (typeof e.target?.closest !== 'function') return; // Document/TextNode — нет .closest
                 if (e.target.closest('#mu-settings-toggle')) return;
                 if (e.target.closest('#mu-settings-panel')) return;
                 if (e.target.closest('#mu-dashboard-toggle')) return;

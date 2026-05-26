@@ -1036,6 +1036,7 @@ window.MUModeration = (function() {
         settings = await MU.getSettings();
 
         document.addEventListener('click', (e) => {
+            if (typeof e.target?.closest !== 'function') return;
             const isBanSubmit = !!e.target.closest('.btn.is-filled.variant-danger');
 
             if (isBanSubmit && activeCard) {
@@ -1072,6 +1073,7 @@ window.MUModeration = (function() {
         }, true);
 
         document.addEventListener('click', (e) => {
+            if (typeof e.target?.closest !== 'function') return;
             // Пробуем точный селектор
             let card = e.target.closest(CARD_SEL);
 
@@ -1093,6 +1095,7 @@ window.MUModeration = (function() {
 
         // Трекинг комментария на страницах манги/аниме
         document.addEventListener('click', (e) => {
+            if (typeof e.target?.closest !== 'function') return;
             const btn = e.target.closest('.comment__dropdown, button.comment__dropdown');
             if (btn) {
                 activeComment = btn.closest('.comment');
@@ -1108,6 +1111,7 @@ window.MUModeration = (function() {
 
         // Трекаем клик по «Удалить» внутри карточки (без попапа)
         document.addEventListener('click', (e) => {
+            if (typeof e.target?.closest !== 'function') return;
             const btn = e.target.closest('a, button');
             if (!btn) return;
             if (btn.innerText?.trim().toLowerCase() !== 'удалить') return;

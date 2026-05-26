@@ -482,6 +482,7 @@ window.MUDashboard = (function() {
 
         // Закрытие по клику вне
         document.addEventListener('click', (e) => {
+            if (typeof e.target?.closest !== 'function') return; // Document/TextNode — нет .closest
             if (e.target.closest('#mu-dashboard-toggle')) return;
             if (e.target.closest('#mu-dashboard-panel')) return;
             if (e.target.closest('#mu-settings-toggle')) return;

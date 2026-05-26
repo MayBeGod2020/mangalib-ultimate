@@ -442,8 +442,10 @@ window.MUForumAnalysis = (function () {
         item.style.cursor = 'pointer';
 
         item.addEventListener('click', () => {
-            // Закрываем меню кликом вне его
-            document.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            // Закрываем меню кликом вне его.
+            // Диспатчим на document.body, а не document —
+            // у Document нет .closest() и все обработчики падают с TypeError
+            document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
             setTimeout(runAnalysis, 80);
         });
 
