@@ -27,6 +27,7 @@
 
   "host_permissions": [
     "https://mangalib.me/*",
+    "https://mangalib.org/*",
     "https://ranobelib.me/*",
     "https://hentailib.me/*",
     "https://v2.shlib.life/*",
@@ -51,6 +52,7 @@
     {
       "matches": [
         "https://mangalib.me/*",
+        "https://mangalib.org/*",
         "https://ranobelib.me/*",
         "https://hentailib.me/*",
         "https://v2.shlib.life/*",
