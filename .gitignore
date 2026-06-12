@@ -9,3 +9,6 @@ desktop.ini
 
 # Logs
 *.log
+
+# Build artifacts
+*.zip

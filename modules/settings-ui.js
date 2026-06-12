@@ -50,6 +50,7 @@ window.MUSettingsUI = (function () {
                 background:var(--background-elevated-2,#fff);
                 border-bottom:1px solid var(--border-base,#e5e5e5);
                 display:flex;justify-content:space-between;align-items:center;
+                flex-shrink:0;
             }
             .mu-settings-title {
                 color:var(--mu-accent, #f39c12);font-weight:700;font-size:14px;
@@ -71,6 +72,7 @@ window.MUSettingsUI = (function () {
                 background:var(--background-elevated-2,#fff);
                 border-bottom:1px solid var(--border-base,#e5e5e5);
                 overflow-x:hidden;
+                flex-shrink:0;
             }
             .mu-settings-tab {
                 flex:1;padding:9px 4px;background:none;border:none;
@@ -86,7 +88,7 @@ window.MUSettingsUI = (function () {
             }
 
             .mu-settings-content {
-                flex:1;overflow-y:auto;padding:14px 16px;
+                flex:1;min-height:0;overflow-y:auto;padding:14px 16px;
                 background:var(--background-elevated-1,#fff);
             }
             .mu-settings-content::-webkit-scrollbar { width:4px; }
@@ -382,15 +384,13 @@ window.MUSettingsUI = (function () {
         function block(icon, title, color, steps) {
             return `
             <div style="border:1px solid ${color}33;border-radius:10px;overflow:hidden;margin-bottom:10px;">
-                <div style="background:${color}18;padding:9px 12px;display:flex;align-items:center;gap:8px;
-                    border-bottom:1px solid ${color}22;cursor:pointer;"
-                    onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';
-                             this.querySelector('.mu-help-arrow').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼'">
+                <div data-mu-help-toggle style="background:${color}18;padding:9px 12px;display:flex;align-items:center;gap:8px;
+                    border-bottom:1px solid ${color}22;cursor:pointer;user-select:none;">
                     <span style="font-size:16px;">${icon}</span>
                     <span style="font-weight:700;font-size:12px;color:${color};flex:1;">${title}</span>
-                    <span class="mu-help-arrow" style="color:${color};font-size:10px;">▼</span>
+                    <span class="mu-help-arrow" style="color:${color};font-size:10px;">▶</span>
                 </div>
-                <div style="padding:10px 12px;display:flex;flex-direction:column;gap:7px;">
+                <div class="mu-help-body" style="padding:10px 12px;display:none;flex-direction:column;gap:7px;">
                     ${steps.map(([num, text]) => `
                         <div style="display:flex;gap:9px;align-items:flex-start;">
                             <span style="
@@ -623,6 +623,15 @@ window.MUSettingsUI = (function () {
                 </select>
             </div>
 
+            <div class="mu-section-title">Стеклянный эффект</div>
+            <div class="mu-setting-row">
+                <div>
+                    <div class="mu-setting-label">Glassmorphism ${tip('Делает карточки сайта полупрозрачными с эффектом размытия. Работает ТОЛЬКО с установленными обоями — без них эффект не применяется')}</div>
+                    <div class="mu-setting-desc">Прозрачность + blur · требует обои в разделе ниже</div>
+                </div>
+                ${renderToggle('personalization', 'glassEffect', p.glassEffect)}
+            </div>
+
             <div class="mu-section-title">Скруглённость</div>
             <div class="mu-setting-row">
                 <div>
@@ -636,11 +645,22 @@ window.MUSettingsUI = (function () {
                 </select>
             </div>
 
-            <div class="mu-section-title">Акцентный цвет</div>
+            <div class="mu-section-title">Цвета</div>
             <div class="mu-setting-row">
                 <div>
-                    <div class="mu-setting-label">Акцентный цвет ${tip('Основной цвет кнопок и элементов интерфейса')}</div>
-                    <div class="mu-setting-desc">Перебивает цвет темы (пусто = не менять)</div>
+                    <div class="mu-setting-label">Цвет фона ${tip('Кастомный цвет фона страницы. Перебивает цвет темы. Автоматически создаёт градиент (светлый → тёмный). Пусто = цвет из темы')}</div>
+                    <div class="mu-setting-desc">Свой цвет фона (перебивает тему)</div>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <input type="color" class="mu-input" data-section="personalization" data-key="bgColor"
+                           value="${p.bgColor || '#000000'}">
+                    <button class="mu-btn" id="mu-clear-bgcolor" style="font-size:9px;padding:3px 6px">Сброс</button>
+                </div>
+            </div>
+            <div class="mu-setting-row">
+                <div>
+                    <div class="mu-setting-label">Акцентный цвет ${tip('Основной цвет кнопок и элементов интерфейса. Перебивает цвет темы')}</div>
+                    <div class="mu-setting-desc">Свой цвет кнопок (перебивает тему)</div>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center">
                     <input type="color" class="mu-input" data-section="personalization" data-key="accentColor"
@@ -924,6 +944,19 @@ window.MUSettingsUI = (function () {
     function attachListeners(tabId) {
         const contentEl = document.getElementById('mu-settings-content');
 
+        // Help tab — collapsible blocks
+        if (tabId === 'help') {
+            contentEl.querySelectorAll('[data-mu-help-toggle]').forEach(header => {
+                header.addEventListener('click', () => {
+                    const body  = header.nextElementSibling;
+                    const arrow = header.querySelector('.mu-help-arrow');
+                    const open  = body.style.display === 'none' || body.style.display === '';
+                    body.style.display  = open ? 'flex' : 'none';
+                    if (arrow) arrow.textContent = open ? '▼' : '▶';
+                });
+            });
+        }
+
         // Toggles
         contentEl.querySelectorAll('input[type="checkbox"][data-section]').forEach(input => {
             input.addEventListener('change', async (e) => {
@@ -993,6 +1026,16 @@ window.MUSettingsUI = (function () {
         if (clearWallpaper) {
             clearWallpaper.addEventListener('click', async () => {
                 await MU.updateSetting('personalization', 'customWallpaper', '');
+                settings = await MU.getSettings();
+                renderTab(activeTab);
+            });
+        }
+
+        // Clear bg color
+        const clearBgColor = document.getElementById('mu-clear-bgcolor');
+        if (clearBgColor) {
+            clearBgColor.addEventListener('click', async () => {
+                await MU.updateSetting('personalization', 'bgColor', '');
                 settings = await MU.getSettings();
                 renderTab(activeTab);
             });
