@@ -9,6 +9,7 @@ window.MUSettingsUI = (function () {
     let settings = null;
     let isPanelOpen = false;
     let activeTab = 'help';
+    let helpSeen = false; // true после первого запуска — help уходит в конец и сжимается до «?»
 
     // ==================== СТИЛИ ====================
 
@@ -326,17 +327,20 @@ window.MUSettingsUI = (function () {
         const tabsEl = document.getElementById('mu-settings-tabs');
         if (!tabsEl) return;
 
-        const tabs = [
-            { id: 'help', label: '❓ Помощь' },
+        const mainTabs = [
             { id: 'moderation', label: '🛡️ Модерация' },
             { id: 'dashboard', label: '📊 Панель' },
             { id: 'reader', label: '📖 Чтение' },
             { id: 'personalization', label: '🎨 Темы' },
             { id: 'ai', label: '🤖 ИИ' },
         ];
+        const helpTab = { id: 'help', label: helpSeen ? '?' : '❓ Помощь' };
+        // Первый запуск: help первый; последующие: help последний и компактный
+        const tabs = helpSeen ? [...mainTabs, helpTab] : [helpTab, ...mainTabs];
 
         MU.setHTML(tabsEl, tabs.map(t => `
-            <button class="mu-settings-tab ${t.id === activeTab ? 'active' : ''}" data-tab="${t.id}">
+            <button class="mu-settings-tab ${t.id === activeTab ? 'active' : ''}" data-tab="${t.id}"
+                    ${helpSeen && t.id === 'help' ? 'style="flex:none;min-width:28px;padding:9px 8px;"' : ''}>
                 ${t.label}
             </button>
         `).join(''));
@@ -1243,6 +1247,12 @@ window.MUSettingsUI = (function () {
 
     async function init() {
         settings = await MU.getSettings();
+
+        // Определяем был ли пользователь уже в расширении — влияет на порядок вкладок
+        helpSeen = await new Promise(resolve => {
+            chrome.storage.local.get('mu_welcomed', data => resolve(!!data.mu_welcomed));
+        });
+        if (helpSeen) activeTab = 'moderation';
 
         injectStyles();
         createSettingsPanel();
