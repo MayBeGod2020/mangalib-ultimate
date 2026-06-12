@@ -327,7 +327,13 @@ window.MUUserTooltip = (function () {
             clearTimeout(showTimer);
         });
         tip.addEventListener('mouseleave', () => {
-            hideTimer = setTimeout(removeTooltip, 300);
+            hideTimer = setTimeout(() => {
+                // Не скрываем если фокус остался внутри тултипа —
+                // пользователь мог открыть системный эмодзи-пикер или контекстное меню
+                // из поля заметки, мышь вышла но взаимодействие продолжается
+                if (tip.contains(document.activeElement)) return;
+                removeTooltip();
+            }, 300);
         });
 
         document.body.appendChild(tip);

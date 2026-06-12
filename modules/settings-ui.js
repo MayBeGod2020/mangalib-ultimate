@@ -983,13 +983,23 @@ window.MUSettingsUI = (function () {
             });
         });
 
-        // Range inputs
+        // Range inputs — обновляем label live, сохраняем только на mouseup/touchend
+        // renderTab() при каждом input-событии уничтожает DOM mid-drag → слайдер теряет захват
         contentEl.querySelectorAll('input[type="range"][data-section]').forEach(input => {
-            input.addEventListener('input', async (e) => {
-                let value = parseFloat(e.target.value);
+            input.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                const desc  = e.target.closest('.mu-setting-row')?.querySelector('.mu-setting-desc');
+                if (!desc) return;
+                const key = e.target.dataset.key;
+                if (key === 'wallpaperOpacity') desc.textContent = `${Math.round(value * 100)}%`;
+                else if (key === 'ranobeFontSize') desc.textContent = `${value}px`;
+                else if (key === 'ranobeLineHeight') desc.textContent = `${value}`;
+            });
+            input.addEventListener('change', async (e) => {
+                const value = parseFloat(e.target.value);
                 await MU.updateSetting(e.target.dataset.section, e.target.dataset.key, value);
                 settings = await MU.getSettings();
-                renderTab(activeTab); // Перерисовываем чтобы обновить значения
+                renderTab(activeTab);
             });
         });
 
